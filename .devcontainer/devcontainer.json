@@ -1,0 +1,26 @@
+{
+    "name": "Go Development",
+    "image": "mcr.microsoft.com/vscode/devcontainers/go:latest",
+
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "ms-vscode.vscode-go"
+            ],
+            "settings": {
+                "go.useLanguageServer": true,
+                "go.languageServerFlags": [
+                    "-rpc.trace" // for more detailed logs
+                ],
+                "go.formatTool": "goimports",
+                "go.lintTool": "golint"
+            }
+        }
+    },
+
+    "forwardPorts": [],
+    "postCreateCommand": "go version",
+    "remoteUser": "vscode"
+}
