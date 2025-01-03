@@ -21,7 +21,7 @@ const (
 type Game struct {
 	camera      rl.Camera
 	cameraMode  rl.CameraMode
-	voxelChunks map[rl.Vector3][]VoxelData
+	voxelChunks map[rl.Vector3]*Chunk
 	perlinNoise *perlin.Perlin
 }
 
@@ -31,23 +31,21 @@ func renderGame(game *Game) {
 
 	rl.BeginMode3D(game.camera)
 
-	for chunkPosition, voxels := range game.voxelChunks {
+	for chunkPosition, chunk := range game.voxelChunks {
 
 		for x := 0; x < chunkSize; x++ {
 
 			for y := 0; y < chunkSize; y++ {
 
 				for z := 0; z < chunkSize; z++ {
-
-					index := x + y*chunkSize + z*chunkSize*chunkSize
-					voxel := voxels[index]
+					voxel := chunk.Voxels[x][y][z]
 
 					if voxel.IsSolid {
 						voxelPosition := rl.NewVector3(chunkPosition.X+float32(x), chunkPosition.Y+float32(y), chunkPosition.Z+float32(z))
 
 						// Face culling
 						for i := 0; i < 6; i++ {
-							if shouldDrawFace(voxels, x, y, z, i) {
+							if shouldDrawFace(chunk, x, y, z, i) {
 								rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, voxel.Color)
 							}
 						}
@@ -85,7 +83,7 @@ func initGame() Game {
 	perlinNoise := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed)
 
 	// Creates a hash map to store voxel data
-	voxelChunks := make(map[rl.Vector3][]VoxelData)
+	voxelChunks := make(map[rl.Vector3]*Chunk)
 	voxelChunks[rl.NewVector3(0, 0, 0)] = generateChunk(rl.NewVector3(0, 0, 0), perlinNoise) // Passing perlinNoise
 
 	rl.SetTargetFPS(120)
