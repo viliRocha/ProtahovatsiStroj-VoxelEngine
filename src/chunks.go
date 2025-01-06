@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
+
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -12,9 +15,37 @@ const (
 )
 
 type VoxelData struct {
-	Type    string
+	Type string
+	Model rl.Model
+}
+
+type BlockProperties struct {
 	Color   rl.Color
 	IsSolid bool
+	IsVisible bool
+}
+
+var blockTypes = map[string]BlockProperties{
+	"Air": {
+		Color:     rl.NewColor(0, 0, 0, 0), // Transparent
+		IsSolid:   false,
+		IsVisible: false,
+	},
+	"Grass": {
+		Color:     rl.NewColor(72, 174, 34, 255), // Green
+		IsSolid:   true,
+		IsVisible: true,
+	},
+	"Dirt": {
+		Color:     rl.Brown,
+		IsSolid:   true,
+		IsVisible: true,
+	},
+	"Plant": {
+		Color:     rl.Red,
+		IsSolid:   false,
+		IsVisible: true,
+	},
 }
 
 type Chunk struct {
@@ -31,7 +62,6 @@ var faceDirections = []rl.Vector3{
 	{0, 0, -1}, // Bottom
 }
 
-// Checks if a neighboring voxel exists and returns true if the face should be drawn
 func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
 	direction := faceDirections[faceIndex]
 
@@ -41,10 +71,10 @@ func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
 	// Checks if the new coordinates are within the chunk bounds
 	if newX >= 0 && newX < chunkSize && newY >= 0 && newY < chunkSize && newZ >= 0 && newZ < chunkSize {
 		// Returns true if the neighboring voxel is not solid
-		return !chunk.Voxels[newX][newY][newZ].IsSolid
+		return !blockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
 	}
 
-	// Verifica as bordas e chunks vizinhos
+	// Checks if a neighboring voxel exists and returns true if the face should be drawn
 	neighborIndex := faceIndex
 	if chunk.Neighbors[neighborIndex] != nil {
 
@@ -63,10 +93,33 @@ func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
 			newZ = chunkSize - 1
 		}
 
-		return !chunk.Neighbors[neighborIndex].Voxels[newX][newY][newZ].IsSolid
+		return !blockTypes[chunk.Neighbors[neighborIndex].Voxels[newX][newY][newZ].Type].IsSolid
 	}
 
 	return true
+}
+
+// Generate vegetation at random surface positions
+func generatePlants(chunk *Chunk) {
+	plantCount := rand.Intn(8)
+
+	for i := 0; i < plantCount; i++ {
+		x := rand.Intn(chunkSize)
+		z := rand.Intn(chunkSize)
+
+		for y := chunkSize - 1; y >= 0; y-- {
+			if blockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
+				if y+1 < chunkSize {
+					//  Randomly define a model for the plant
+					randomModel := rand.Intn(4)                                                          // 0 - 3
+					plantModel := rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", randomModel)) //	Load .vox model
+
+					chunk.Voxels[x][y+1][z] = VoxelData{Type: "RedCube", Model: plantModel}
+				}
+				break
+			}
+		}
+	}
 }
 
 func generateChunk(position rl.Vector3, p *perlin.Perlin) *Chunk {
@@ -81,41 +134,26 @@ func generateChunk(position rl.Vector3, p *perlin.Perlin) *Chunk {
 				isSolid := y <= height
 
 				if isSolid {
-					chunk.Voxels[x][y][z] = createVoxelData(y, height)
-				} else {
-					chunk.Voxels[x][y][z] = VoxelData{
-						Type:    "Air",
-						Color:   rl.NewColor(0, 0, 0, 0), // Transparent
-						IsSolid: false,
+					chunk.Voxels[x][y][z] = VoxelData{Type: "Dirt"}
+
+					if y == height {
+						chunk.Voxels[x][y][z] = VoxelData{Type: "Grass"}
 					}
+				} else {
+					chunk.Voxels[x][y][z] = VoxelData{Type: "Air"}
 				}
 			}
 		}
 	}
+	//  Generate the plants after the terrain generation
+	generatePlants(chunk)
+
 	return chunk
 }
 
 func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
 	noiseValue := p.Noise2D(float64(position.X+float32(x))*perlinFrequency, float64(position.Z+float32(z))*perlinFrequency)
 	return int((noiseValue + 1.0) / 2.0 * float64(chunkSize)) // Normalizes the noise value to [0, chunkSize]
-}
-
-func createVoxelData(y, height int) VoxelData {
-	// Checks if the block above is air
-	if y == height {
-		// If the block above is air, sets it to grass
-		return VoxelData{
-			Type:    "Grass",
-			Color:   rl.NewColor(72, 174, 34, 255), // Green
-			IsSolid: true,
-		}
-	} else {
-		return VoxelData{
-			Type:    "Dirt",
-			Color:   rl.Brown,
-			IsSolid: true,
-		}
-	}
 }
 
 func manageChunks(playerPosition rl.Vector3, voxelChunks map[rl.Vector3]*Chunk, p *perlin.Perlin) {

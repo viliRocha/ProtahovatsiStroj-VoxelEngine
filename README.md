@@ -17,8 +17,8 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
-![light](./img/lighting.png)
-![world_gen](./img/landscape.png)
+<img src="./img/lighting.png" alt="light" width="1000px">
+<img src="./img/landscape.png" alt="world_gen" width="1000px">
 
 ## Getting Started 🚀
 To get started with the voxel engine, clone the repository and open the folder. Make sure you have Go installed on your device. Then, run the command `go mod tidy` and finally, to compile the project, run `go run ./src`.
@@ -27,4 +27,4 @@ To get started with the voxel engine, clone the repository and open the folder. 
 This project is licensed under the MIT License - see the `LICENSE` file for details.
 
 ## Acknowledgments 🙏
-Inspired by CubeWorld and [TanTan's](https://github.com/TanTanDev) Voxel engine built with the beavy engine. <!--Special thanks to the resources and tutorials that helped shape this project.-->
+Inspired by [CubeWorld](https://store.steampowered.com/app/1128000/Cube_World/) and [TanTan's](https://github.com/TanTanDev) Voxel engine built with the beavy engine. I would also like to acknowledge the use of voxelized vegetation assets from [MangoVoxel](https://mangovoxel.itch.io/voxelfoliage) in my voxel engine. <!--Special thanks to the resources and tutorials that helped shape this project.-->

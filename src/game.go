@@ -1,10 +1,10 @@
 package main
 
 import (
-    "github.com/gen2brain/raylib-go/raylib"
-    "github.com/aquilax/go-perlin"
-    "math/rand"
-    "fmt"
+	"math/rand"
+
+	"github.com/aquilax/go-perlin"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
@@ -23,46 +23,7 @@ type Game struct {
 	cameraMode  rl.CameraMode
 	voxelChunks map[rl.Vector3]*Chunk
 	perlinNoise *perlin.Perlin
-}
-
-func renderGame(game *Game) {
-	rl.BeginDrawing()
-	rl.ClearBackground(rl.NewColor(150, 208, 233, 255)) //   Light blue
-
-	rl.BeginMode3D(game.camera)
-
-	for chunkPosition, chunk := range game.voxelChunks {
-
-		for x := 0; x < chunkSize; x++ {
-
-			for y := 0; y < chunkSize; y++ {
-
-				for z := 0; z < chunkSize; z++ {
-					voxel := chunk.Voxels[x][y][z]
-
-					if voxel.IsSolid {
-						voxelPosition := rl.NewVector3(chunkPosition.X+float32(x), chunkPosition.Y+float32(y), chunkPosition.Z+float32(z))
-
-						// Face culling
-						for i := 0; i < 6; i++ {
-							if shouldDrawFace(chunk, x, y, z, i) {
-								rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, voxel.Color)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	rl.EndMode3D()
-
-	// Draw debug text
-	rl.DrawFPS(10, 30)
-
-	positionText := fmt.Sprintf("Player's position: (%.2f, %.2f, %.2f)", game.camera.Position.X, game.camera.Position.Y, game.camera.Position.Z)
-	rl.DrawText(positionText, 10, 5, 20, rl.DarkGreen)
-
-	rl.EndDrawing()
+	//lightPosition rl.Vector3
 }
 
 func initGame() Game {
@@ -86,6 +47,8 @@ func initGame() Game {
 	voxelChunks := make(map[rl.Vector3]*Chunk)
 	voxelChunks[rl.NewVector3(0, 0, 0)] = generateChunk(rl.NewVector3(0, 0, 0), perlinNoise) // Passing perlinNoise
 
+	//lightPosition := rl.NewVector3(5, 5, 5)
+
 	rl.SetTargetFPS(120)
 
 	return Game{
@@ -93,5 +56,6 @@ func initGame() Game {
 		cameraMode:  cameraMode,
 		voxelChunks: voxelChunks,
 		perlinNoise: perlinNoise,
+		//lightPosition: lightPosition,
 	}
 }
