@@ -4,12 +4,12 @@ A voxel engine built using **raylib-go** and **OpenGL**
 ##  Features 🌟
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
 - **Dynamic Lighting**: Implemented basic lighting to enhance the visual experience.
+- **Water Formations**: Realistic water bodies.
 
 ## Upcoming Features 📋
 - **Layered Landscapes**: Add more geological layers, such as stone.
 - **Enhanced Lighting**: Introduce ambient occlusion for better depth perception.
 - **Fog Effects**: Create atmospheric depth with fog.
-- **Water Formations**: Integrate realistic water bodies into the world generation.
 - **Surface Feature System**: Add trees, flowers, and grass to enrich the environment.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes for a richer exploration experience.

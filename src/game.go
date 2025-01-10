@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
@@ -46,6 +47,11 @@ func initGame() Game {
 	// Creates a hash map to store voxel data
 	voxelChunks := make(map[rl.Vector3]*Chunk)
 	voxelChunks[rl.NewVector3(0, 0, 0)] = generateChunk(rl.NewVector3(0, 0, 0), perlinNoise) // Passing perlinNoise
+
+	//	Load .vox models
+	for i := 0; i < 4; i++ {
+		plantModels[i] = rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", i))
+	}
 
 	//lightPosition := rl.NewVector3(5, 5, 5)
 

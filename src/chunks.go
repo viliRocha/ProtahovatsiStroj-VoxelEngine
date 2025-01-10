@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
@@ -9,19 +8,21 @@ import (
 )
 
 const (
-	chunkSize       int = 16
-	chunkDistance   int = 2
+	chunkSize       int = 32
+	chunkDistance   int = 1
 	perlinFrequency     = 0.1
 )
 
+var plantModels [4]rl.Model
+
 type VoxelData struct {
-	Type string
+	Type  string
 	Model rl.Model
 }
 
 type BlockProperties struct {
-	Color   rl.Color
-	IsSolid bool
+	Color     rl.Color
+	IsSolid   bool
 	IsVisible bool
 }
 
@@ -43,6 +44,11 @@ var blockTypes = map[string]BlockProperties{
 	},
 	"Plant": {
 		Color:     rl.Red,
+		IsSolid:   false,
+		IsVisible: true,
+	},
+	"Water": {
+		Color:     rl.NewColor(0, 0, 255, 60), // Transparent blue
 		IsSolid:   false,
 		IsVisible: true,
 	},
@@ -107,16 +113,27 @@ func generatePlants(chunk *Chunk) {
 		x := rand.Intn(chunkSize)
 		z := rand.Intn(chunkSize)
 
+		// Iterate from the top to the bottom of the chunk to find the surface
 		for y := chunkSize - 1; y >= 0; y-- {
 			if blockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
-				if y+1 < chunkSize {
+				// Ensure plants are only placed above layer 15 (water)
+				if y+1 < chunkSize && y+1 > 15 {
 					//  Randomly define a model for the plant
-					randomModel := rand.Intn(4)                                                          // 0 - 3
-					plantModel := rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", randomModel)) //	Load .vox model
-
-					chunk.Voxels[x][y+1][z] = VoxelData{Type: "RedCube", Model: plantModel}
+					randomModel := rand.Intn(4) // 0 - 3
+					chunk.Voxels[x][y+1][z] = VoxelData{Type: "Plant", Model: plantModels[randomModel]}
 				}
 				break
+			}
+		}
+	}
+}
+
+func addWater(chunk *Chunk) {
+	for x := 0; x < chunkSize; x++ {
+		for z := 0; z < chunkSize; z++ {
+			//	Water shouldn't replace solid blocks (go through them)
+			if chunk.Voxels[x][15][z].Type == "Air" {
+				chunk.Voxels[x][15][z] = VoxelData{Type: "Water"}
 			}
 		}
 	}
@@ -148,6 +165,9 @@ func generateChunk(position rl.Vector3, p *perlin.Perlin) *Chunk {
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk)
 
+	// Add water to specific layer
+	addWater(chunk)
+
 	return chunk
 }
 
@@ -170,7 +190,7 @@ func manageChunks(playerPosition rl.Vector3, voxelChunks map[rl.Vector3]*Chunk, 
 		}
 	}
 
-    // Ensures that each chunk on the voxelChunks map has up-to-date references to its neighboring chunks in all directions
+	// Ensures that each chunk on the voxelChunks map has up-to-date references to its neighboring chunks in all directions
 	for chunkPos, chunk := range voxelChunks {
 		for i, direction := range faceDirections {
 			neighborPos := rl.NewVector3(chunkPos.X+direction.X*float32(chunkSize), chunkPos.Y, chunkPos.Z+direction.Z*float32(chunkSize))
