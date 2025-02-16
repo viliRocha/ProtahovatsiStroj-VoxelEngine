@@ -11,7 +11,7 @@ func renderVoxels(game *Game, renderTransparent bool) {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
 
-	for chunkPosition, chunk := range game.voxelChunks {
+	for chunkPosition, chunk := range game.chunkCache.chunks {
 		for x := 0; x < chunkSize; x++ {
 			for y := 0; y < chunkSize; y++ {
 				for z := 0; z < chunkSize; z++ {
@@ -26,11 +26,12 @@ func renderVoxels(game *Game, renderTransparent bool) {
 									lightIntensity := calculateLightIntensity(voxelPosition, game.lightPosition)
 									voxelColor := applyLighting(blockTypes[voxel.Type].Color, lightIntensity)
 								*/
-								if voxel.Type == "Plant" {
+								switch voxel.Type {
+								case "Plant":
 									rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
-								} else if voxel.Type == "Water" {
+								case "Water":
 									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), blockTypes[voxel.Type].Color)
-								} else {
+								default:
 									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, blockTypes[voxel.Type].Color)
 								}
 							}
@@ -59,6 +60,12 @@ func renderGame(game *Game) {
 	renderVoxels(game, true)
 
 	rl.EndMode3D()
+
+	// Apply light blue filter - for underwater
+	if game.camera.Position.Y < 13 {
+		rl.SetBlendMode(rl.BlendMode(0))
+		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
+	}
 
 	// Draw debug text
 	rl.DrawFPS(10, 30)
