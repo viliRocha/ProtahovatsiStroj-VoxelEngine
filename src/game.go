@@ -24,6 +24,7 @@ type Game struct {
 	cameraMode  rl.CameraMode
 	chunkCache  *ChunkCache
 	perlinNoise *perlin.Perlin
+	shader      rl.Shader
 	//lightPosition rl.Vector3
 }
 
@@ -50,6 +51,7 @@ func initGame() Game {
 	}
 
 	//lightPosition := rl.NewVector3(5, 5, 5)
+	shader := rl.LoadShader("", "./shaders/occlusion.fs")
 
 	chunkCache := NewChunkCache()                                                                                    // Initialize ChunkCache
 	chunkCache.chunks[rl.NewVector3(0, 0, 0)] = generateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
@@ -61,6 +63,7 @@ func initGame() Game {
 		cameraMode:  cameraMode,
 		chunkCache:  chunkCache,
 		perlinNoise: perlinNoise,
+		shader:      shader,
 		//lightPosition: lightPosition,
 	}
 }

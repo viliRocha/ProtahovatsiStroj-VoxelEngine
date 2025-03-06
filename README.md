@@ -1,19 +1,18 @@
 # PtotahovatsiStroj
-### v0.5
+### v0.6
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
 
 ##  Features 🌟
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
-- **Dynamic Lighting**: Implemented basic lighting to enhance the visual experience.
+- **Dynamic Lighting**: Implemented basic lighting with ambient occlusion for better depth perception.
 - **Water Formations**: Realistic water bodies.
+- **Surface Feature System**: Precedurally generated trees and randomly placed flowers and tall grass.
 
 ## Upcoming Features 📋
 - **Layered Landscapes**: Add more geological layers, such as stone.
-- **Enhanced Lighting**: Introduce ambient occlusion for better depth perception.
 - **Fog Effects**: Create atmospheric depth with fog.
-- **Surface Feature System**: Add trees, flowers, and grass to enrich the environment.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes for a richer exploration experience.
 - **Cave Generation**: Create intricate cave systems for players to discover.

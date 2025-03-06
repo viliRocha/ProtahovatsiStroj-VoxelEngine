@@ -28,11 +28,22 @@ func renderVoxels(game *Game, renderTransparent bool) {
 								*/
 								switch voxel.Type {
 								case "Plant":
+									//	Plants are smaller than normal voxels, decrease their heigth so they touch the ground
+									voxelPosition.Y -= 0.5
+
 									rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+
+									voxelPosition.Y += 0.5 // Reverts the setting for other operations
 								case "Water":
 									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), blockTypes[voxel.Type].Color)
 								default:
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, blockTypes[voxel.Type].Color)
+									// Ambient occlusion
+									occlusion := calculateAmbientOcclusion(chunk, x, y, z)
+									rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "ambientOcclusion"), []float32{occlusion}, rl.ShaderUniformFloat)
+
+									color := rl.Color(blockTypes[chunk.Voxels[x][y][z].Type].Color)
+
+									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, darkenColor(color, -100))
 								}
 							}
 						}

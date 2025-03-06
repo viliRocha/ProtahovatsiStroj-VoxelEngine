@@ -48,6 +48,16 @@ var blockTypes = map[string]BlockProperties{
 		IsSolid:   false,
 		IsVisible: true,
 	},
+	"Wood": {
+		Color:     rl.NewColor(126, 90, 57, 255), // Light brown
+		IsSolid:   false,
+		IsVisible: true,
+	},
+	"Leaves": {
+		Color:     rl.NewColor(73, 129, 49, 255), // Dark green
+		IsSolid:   false,
+		IsVisible: true,
+	},
 	"Water": {
 		Color:     rl.NewColor(0, 0, 255, 60), // Transparent blue
 		IsSolid:   false,
@@ -133,8 +143,8 @@ func generatePlants(chunk *Chunk, chunkPos rl.Vector3, reusePlants bool) {
 			// Iterate from the top to the bottom of the chunk to find the surface
 			for y := chunkSize - 1; y >= 0; y-- {
 				if blockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
-					// Ensure plants are only placed above layer 15 (water)
-					if y+1 < chunkSize && y+1 > 13 {
+					// Ensure plants are only placed above layer 13 (water)
+					if y < chunkSize && y > 13 {
 						//  Randomly define a model for the plant
 						randomModel := rand.Intn(4) // 0 - 3
 						chunk.Voxels[x][y+1][z] = VoxelData{Type: "Plant", Model: plantModels[randomModel]}
@@ -147,6 +157,78 @@ func generatePlants(chunk *Chunk, chunkPos rl.Vector3, reusePlants bool) {
 		}
 	}
 }
+
+/*
+func applyLSystem(iterations int) string {
+	axiom := "X"
+	rules := map[rune]string{
+		'X': "F[-X][X]F[-X]+X",
+		'F': "FF",
+	}
+	result := axiom
+	for i := 0; i < iterations; i++ {
+		newResult := ""
+		for _, char := range result {
+			if replacement, ok := rules[char]; ok {
+				newResult += replacement
+			} else {
+				newResult += string(char)
+			}
+		}
+		result = newResult
+	}
+	//fmt.Println("L-system result:", result) // Debug output
+	return result
+}
+
+func generateTrees(chunk *Chunk, startPosition rl.Vector3, lSystem string) {
+	stack := make([][2]rl.Vector3, 0) // Array to hold both position and direction
+	position := startPosition
+	direction := rl.NewVector3(0, 1, 0) // Initial direction is upwards
+
+	for _, char := range lSystem {
+		//fmt.Printf("Processing char: %c, Position: %v, Direction: %v\n", char, position, direction) // Debug output
+
+		switch char {
+		case 'F':
+			if position.Y >= 0 && int(position.Y) < chunkSize {
+				chunk.Voxels[int(position.X)][int(position.Y)][int(position.Z)] = VoxelData{Type: "Wood"}
+				position.X += direction.X
+				position.Y += direction.Y
+				position.Z += direction.Z
+			}
+		case '-':
+			// Turn left
+			angle := -math.Pi / 4 // Adjust the angle as needed
+			direction = rl.NewVector3(
+				direction.X*float32(math.Cos(angle))-direction.Z*float32(math.Sin(angle)),
+				direction.Y,
+				direction.X*float32(math.Sin(angle))+direction.Z*float32(math.Cos(angle)),
+			)
+		case '+':
+			// Turn right
+			angle := math.Pi / 4 // Adjust the angle as needed
+			direction = rl.NewVector3(
+				direction.X*float32(math.Cos(angle))-direction.Z*float32(math.Sin(angle)),
+				direction.Y,
+				direction.X*float32(math.Sin(angle))+direction.Z*float32(math.Cos(angle)),
+			)
+		case '[':
+			// Save the current position and direction
+			stack = append(stack, [2]rl.Vector3{position, direction})
+		case ']':
+			// Restore the last saved position and direction
+			if len(stack) > 0 {
+				position, direction = stack[len(stack)-1][0], stack[len(stack)-1][1]
+				stack = stack[:len(stack)-1]
+			}
+		}
+
+		// Print current position and direction after processing the character
+		//fmt.Printf("After processing char: %c, Position: %v, Direction: %v\n", char, position, direction) // Debug output
+	}
+}
+*/
 
 func addWater(chunk *Chunk) {
 	for x := 0; x < chunkSize; x++ {
@@ -184,6 +266,8 @@ func generateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 	}
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
+
+	//generateTrees(chunk, rl.Vector3{X: float32(rand.Intn(chunkSize)), Y: float32(chunkSize - 1), Z: float32(rand.Intn(chunkSize))}, applyLSystem(4))
 
 	// Add water to specific layer
 	addWater(chunk)
