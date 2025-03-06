@@ -17,10 +17,14 @@ func calculateAmbientOcclusion(chunk *Chunk, x, y, z int) float32 {
 	}
 	for _, neighbor := range neighbors {
 		if isValidPosition(chunk, neighbor.X, neighbor.Y, neighbor.Z) && chunk.Voxels[neighbor.X][neighbor.Y][neighbor.Z].Type != "Air" {
-			occlusion += 0.1
+			occlusion += 0.025
 		}
 	}
-	return 1 - float32(occlusion) // Normalizes the value between 0 and 1
+	occlusionValue := 1 - float32(occlusion) // Normalizes the value between 0 and 1
+	if occlusionValue < 0 {
+		occlusionValue = 0
+	}
+	return occlusionValue
 }
 
 // Make sure that the position is valid in the chunk

@@ -1,10 +1,13 @@
-#version 330
+#version 330 core
+in vec3 fragNormal;
 
-in vec4 fragColor;
 out vec4 finalColor;
 
-uniform float ambientOcclusion;
+uniform vec3 lightDir;
+uniform vec4 voxelColor;
 
 void main() {
-    finalColor = fragColor * ambientOcclusion;
+    vec3 normal = normalize(fragNormal);
+    float intensity = max(dot(normal, -lightDir), 0.2);  // Adicionando iluminação mínima
+    finalColor = voxelColor * intensity;
 }

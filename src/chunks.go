@@ -43,6 +43,11 @@ var blockTypes = map[string]BlockProperties{
 		IsSolid:   true,
 		IsVisible: true,
 	},
+	"Stone": {
+		Color:     rl.Gray,
+		IsSolid:   true,
+		IsVisible: true,
+	},
 	"Plant": {
 		Color:     rl.Red,
 		IsSolid:   false,
@@ -92,6 +97,11 @@ var faceDirections = []rl.Vector3{
 }
 
 func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
+	// If there is no chunk below, hide the base
+	if y == 0 && chunk.Neighbors[5] == nil {
+		return false
+	}
+
 	direction := faceDirections[faceIndex]
 
 	//  Calculates the new coordinates based on the face direction
@@ -103,28 +113,27 @@ func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
 		return !blockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
 	}
 
-	// Checks if a neighboring voxel exists and returns true if the face should be drawn
-	if chunk.Neighbors[faceIndex] != nil {
-
-		switch faceIndex {
-		case 0: // Front (x+1)
-			newX = 0
-		case 1: // Back (x-1)
-			newX = chunkSize - 1
-		case 2: // Left (y+1)
-			newY = 0
-		case 3: // Right (y-1)
-			newY = chunkSize - 1
-		case 4: // Top (z+1)
-			newZ = 0
-		case 5: // Bottom (z-1)
-			newZ = chunkSize - 1
-		}
-
-		return !blockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
+	if chunk.Neighbors[faceIndex] == nil {
+		return false
 	}
 
-	return true
+	// Checks if a neighboring voxel exists and returns true if the face should be drawn
+	switch faceIndex {
+	case 0: // Right (X+)
+		newX = 0
+	case 1: // Left (X-)
+		newX = chunkSize - 1
+	case 2: // Top (Y+)
+		newY = 0
+	case 3: // Bottom (Y-)
+		newY = chunkSize - 1
+	case 4: // Front (Z+)
+		newZ = 0
+	case 5: // Back (Z-)
+		newZ = chunkSize - 1
+	}
+
+	return !blockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
 }
 
 // Generate vegetation at random surface positions
@@ -257,6 +266,8 @@ func generateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 
 					if y == height {
 						chunk.Voxels[x][y][z] = VoxelData{Type: "Grass"}
+					} else if y <= height-5 {
+						chunk.Voxels[x][y][z] = VoxelData{Type: "Stone"}
 					}
 				} else {
 					chunk.Voxels[x][y][z] = VoxelData{Type: "Air"}

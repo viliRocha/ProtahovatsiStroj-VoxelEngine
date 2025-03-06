@@ -24,8 +24,15 @@ type Game struct {
 	cameraMode  rl.CameraMode
 	chunkCache  *ChunkCache
 	perlinNoise *perlin.Perlin
-	shader      rl.Shader
+	//shader      rl.Shader
 	//lightPosition rl.Vector3
+}
+
+func loadShader() rl.Shader {
+	shader := rl.LoadShader("./shaders/occlusion.vs", "./shaders/occlusion.fs")
+	lightDir := rl.NewVector3(1.0, -1.0, 1.0)
+	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "lightDir"), []float32{lightDir.X, lightDir.Y, lightDir.Z}, rl.ShaderUniformVec3)
+	return shader
 }
 
 func initGame() Game {
@@ -51,7 +58,7 @@ func initGame() Game {
 	}
 
 	//lightPosition := rl.NewVector3(5, 5, 5)
-	shader := rl.LoadShader("", "./shaders/occlusion.fs")
+	//shader := loadShader()
 
 	chunkCache := NewChunkCache()                                                                                    // Initialize ChunkCache
 	chunkCache.chunks[rl.NewVector3(0, 0, 0)] = generateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
@@ -63,7 +70,7 @@ func initGame() Game {
 		cameraMode:  cameraMode,
 		chunkCache:  chunkCache,
 		perlinNoise: perlinNoise,
-		shader:      shader,
+		//shader:      shader,
 		//lightPosition: lightPosition,
 	}
 }

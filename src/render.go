@@ -11,6 +11,9 @@ func renderVoxels(game *Game, renderTransparent bool) {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
 
+	//view := rl.GetCameraMatrix(game.camera)
+	//projection := rl.MatrixPerspective(game.camera.Fovy, float32(screenWidth)/float32(screenHeight), 0.01, 1000.0)
+
 	for chunkPosition, chunk := range game.chunkCache.chunks {
 		for x := 0; x < chunkSize; x++ {
 			for y := 0; y < chunkSize; y++ {
@@ -38,12 +41,23 @@ func renderVoxels(game *Game, renderTransparent bool) {
 									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), blockTypes[voxel.Type].Color)
 								default:
 									// Ambient occlusion
-									occlusion := calculateAmbientOcclusion(chunk, x, y, z)
-									rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "ambientOcclusion"), []float32{occlusion}, rl.ShaderUniformFloat)
+									/*
+										rl.PushMatrix()
+										rl.Translatef(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+										model := rl.GetMatrixModelview()
+										rl.PopMatrix()
 
-									color := rl.Color(blockTypes[chunk.Voxels[x][y][z].Type].Color)
+										mvp := rl.MatrixMultiply(projection, rl.MatrixMultiply(view, model))
+										rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "mvp"), mvp)
 
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, darkenColor(color, -100))
+										voxelColor := blockTypes[voxel.Type].Color
+										color := []float32{float32(voxelColor.R) / 255.0, float32(voxelColor.G) / 255.0, float32(voxelColor.B) / 255.0, float32(voxelColor.A) / 255.0}
+										rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "color"), color, rl.ShaderUniformVec4)
+
+										normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
+										rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "lightDir"), []float32{normal.X, normal.Y, normal.Z}, rl.ShaderUniformVec3)
+									*/
+									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, blockTypes[voxel.Type].Color)
 								}
 							}
 						}
@@ -65,10 +79,14 @@ func renderGame(game *Game) {
 
 	rl.BeginMode3D(game.camera)
 
+	//rl.BeginShaderMode(game.shader)
+
 	//	Begin drawing solid blocks and then transparent ones (avoid flickering)
 	renderVoxels(game, false)
 
 	renderVoxels(game, true)
+
+	//rl.EndShaderMode()
 
 	rl.EndMode3D()
 
