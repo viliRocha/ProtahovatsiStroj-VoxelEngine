@@ -6,6 +6,46 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
+	// If there is no chunk below, hide the base
+	if y == 0 && chunk.Neighbors[5] == nil {
+		return false
+	}
+
+	direction := faceDirections[faceIndex]
+
+	//  Calculates the new coordinates based on the face direction
+	newX, newY, newZ := x+int(direction.X), y+int(direction.Y), z+int(direction.Z)
+
+	// Checks if the new coordinates are within the chunk bounds
+	if newX >= 0 && newX < chunkSize && newY >= 0 && newY < chunkSize && newZ >= 0 && newZ < chunkSize {
+		// Returns true if the neighboring voxel is not solid
+		return !blockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
+	}
+
+	if chunk.Neighbors[faceIndex] == nil {
+		return false
+	}
+
+	// Checks if a neighboring voxel exists and returns true if the face should be drawn
+	switch faceIndex {
+	case 0: // Right (X+)
+		newX = 0
+	case 1: // Left (X-)
+		newX = chunkSize - 1
+	case 2: // Top (Y+)
+		newY = 0
+	case 3: // Bottom (Y-)
+		newY = chunkSize - 1
+	case 4: // Front (Z+)
+		newZ = 0
+	case 5: // Back (Z-)
+		newZ = chunkSize - 1
+	}
+
+	return !blockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
+}
+
 func renderVoxels(game *Game, renderTransparent bool) {
 	if renderTransparent {
 		rl.SetBlendMode(rl.BlendAlpha)

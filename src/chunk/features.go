@@ -4,24 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"sync"
 
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const (
-	chunkSize       int = 32
-	chunkDistance   int = 1
-	perlinFrequency     = 0.03
-)
-
 var plantModels [4]rl.Model
-
-type VoxelData struct {
-	Type  string
-	Model rl.Model
-}
 
 type BlockProperties struct {
 	Color     rl.Color
@@ -77,70 +65,10 @@ var blockTypes = map[string]BlockProperties{
 	},
 }
 
-type Chunk struct {
-	Voxels    [chunkSize][chunkSize][chunkSize]VoxelData
-	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
-	Plants    []PlantData
-}
-
-// Strores plant positions
+// Stores plant positions
 type PlantData struct {
 	Position rl.Vector3
 	Model    rl.Model
-}
-
-type ChunkCache struct {
-	chunks     map[rl.Vector3]*Chunk
-	cacheMutex sync.Mutex
-}
-
-var faceDirections = []rl.Vector3{
-	{1, 0, 0},  // Front
-	{-1, 0, 0}, // Back
-	{0, 1, 0},  // Left
-	{0, -1, 0}, // Right
-	{0, 0, 1},  // Top
-	{0, 0, -1}, // Bottom
-}
-
-func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
-	// If there is no chunk below, hide the base
-	if y == 0 && chunk.Neighbors[5] == nil {
-		return false
-	}
-
-	direction := faceDirections[faceIndex]
-
-	//  Calculates the new coordinates based on the face direction
-	newX, newY, newZ := x+int(direction.X), y+int(direction.Y), z+int(direction.Z)
-
-	// Checks if the new coordinates are within the chunk bounds
-	if newX >= 0 && newX < chunkSize && newY >= 0 && newY < chunkSize && newZ >= 0 && newZ < chunkSize {
-		// Returns true if the neighboring voxel is not solid
-		return !blockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
-	}
-
-	if chunk.Neighbors[faceIndex] == nil {
-		return false
-	}
-
-	// Checks if a neighboring voxel exists and returns true if the face should be drawn
-	switch faceIndex {
-	case 0: // Right (X+)
-		newX = 0
-	case 1: // Left (X-)
-		newX = chunkSize - 1
-	case 2: // Top (Y+)
-		newY = 0
-	case 3: // Bottom (Y-)
-		newY = chunkSize - 1
-	case 4: // Front (Z+)
-		newZ = 0
-	case 5: // Back (Z-)
-		newZ = chunkSize - 1
-	}
-
-	return !blockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
 }
 
 // Generate vegetation at random surface positions
@@ -314,125 +242,4 @@ func genWaterFormations(chunk *Chunk) {
 			}
 		}
 	}
-}
-
-func generateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants bool) *Chunk {
-	chunk := &Chunk{}
-
-	for x := 0; x < chunkSize; x++ {
-		for z := 0; z < chunkSize; z++ {
-			// Use Perlin noise to generate the height of the terrain
-			height := calculateHeight(position, p, x, z)
-
-			for y := 0; y < chunkSize; y++ {
-				isSolid := y <= height
-
-				if isSolid {
-					chunk.Voxels[x][y][z] = VoxelData{Type: "Dirt"}
-
-					//	Grass shoulden't generate under water
-					if y == height && y > 12 {
-						chunk.Voxels[x][y][z] = VoxelData{Type: "Grass"}
-					} else if y <= height-5 {
-						chunk.Voxels[x][y][z] = VoxelData{Type: "Stone"}
-					}
-				} else {
-					chunk.Voxels[x][y][z] = VoxelData{Type: "Air"}
-				}
-			}
-		}
-	}
-	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, reusePlants)
-
-	generateTrees(chunk, "F=F[+F[+F]F[-F]]F[-F[+F]F[-F]]")
-
-	// Add water to specific layer
-	genWaterFormations(chunk)
-
-	return chunk
-}
-
-func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
-	noiseValue := p.Noise2D(float64(position.X+float32(x))*perlinFrequency, float64(position.Z+float32(z))*perlinFrequency)
-	return int((noiseValue + 1.0) / 2.0 * float64(chunkSize)) // Normalizes the noise value to [0, chunkSize]
-}
-
-func NewChunkCache() *ChunkCache {
-	// Creates a hash map to store voxel data
-	return &ChunkCache{
-		chunks: make(map[rl.Vector3]*Chunk),
-	}
-}
-
-func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *Chunk {
-	cc.cacheMutex.Lock()
-	defer cc.cacheMutex.Unlock()
-
-	if chunk, exists := cc.chunks[position]; exists {
-		generateAbovegroundChunk(position, p, true)
-		return chunk
-	} else {
-		chunk := generateAbovegroundChunk(position, p, false)
-		cc.chunks[position] = chunk
-		return chunk
-	}
-}
-
-func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
-	cc.cacheMutex.Lock()
-	defer cc.cacheMutex.Unlock()
-
-	playerChunkX := int(playerPosition.X) / chunkSize
-	playerChunkZ := int(playerPosition.Z) / chunkSize
-
-	for position := range cc.chunks {
-		if abs(int(position.X)/chunkSize-playerChunkX) > chunkDistance || abs(int(position.Z)/chunkSize-playerChunkZ) > chunkDistance {
-			delete(cc.chunks, position)
-		}
-	}
-}
-
-func manageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.Perlin) {
-	playerChunkX := int(playerPosition.X) / chunkSize
-	playerChunkZ := int(playerPosition.Z) / chunkSize
-
-	var wg sync.WaitGroup
-	// Load chunks within the range
-	for x := playerChunkX - chunkDistance; x <= playerChunkX+chunkDistance; x++ {
-		for z := playerChunkZ - chunkDistance; z <= playerChunkZ+chunkDistance; z++ {
-			chunkPosition := rl.NewVector3(float32(x*chunkSize), 0, float32(z*chunkSize))
-			if _, exists := chunkCache.chunks[chunkPosition]; !exists {
-				wg.Add(1)
-				go func(cp rl.Vector3) {
-					defer wg.Done()
-					chunkCache.GetChunk(cp, p)
-				}(chunkPosition)
-			}
-		}
-	}
-	wg.Wait()
-
-	// Ensures that each chunk on the chunkCache.chunks map has up-to-date references to its neighboring chunks in all directions
-	for chunkPos, chunk := range chunkCache.chunks {
-		for i, direction := range faceDirections {
-			neighborPos := rl.NewVector3(chunkPos.X+direction.X*float32(chunkSize), chunkPos.Y, chunkPos.Z+direction.Z*float32(chunkSize))
-			if neighbor, exists := chunkCache.chunks[neighborPos]; exists {
-				chunk.Neighbors[i] = neighbor
-			} else {
-				chunk.Neighbors[i] = nil
-			}
-		}
-	}
-
-	// Remove chunks outside the range
-	chunkCache.CleanUp(playerPosition)
-}
-
-// Function to calculate the absolute value
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
 }
