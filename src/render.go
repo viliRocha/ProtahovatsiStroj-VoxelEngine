@@ -11,7 +11,14 @@ func renderVoxels(game *Game, renderTransparent bool) {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
 
-	//view := rl.GetCameraMatrix(game.camera)
+	/*
+		view := rl.GetCameraMatrix(game.camera)
+		projection := rl.GetCameraMatrix(game.camera)
+
+		rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_proj"), projection)
+		rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_view"), view)
+	*/
+
 	//projection := rl.MatrixPerspective(game.camera.Fovy, float32(screenWidth)/float32(screenHeight), 0.01, 1000.0)
 
 	for chunkPosition, chunk := range game.chunkCache.chunks {
@@ -29,6 +36,11 @@ func renderVoxels(game *Game, renderTransparent bool) {
 									lightIntensity := calculateLightIntensity(voxelPosition, game.lightPosition)
 									voxelColor := applyLighting(blockTypes[voxel.Type].Color, lightIntensity)
 								*/
+								/*
+									modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+									rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_model"), modelMatrix)
+								*/
+
 								switch voxel.Type {
 								case "Plant":
 									//	Plants are smaller than normal voxels, decrease their heigth so they touch the ground
@@ -55,8 +67,8 @@ func renderVoxels(game *Game, renderTransparent bool) {
 										rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "color"), color, rl.ShaderUniformVec4)
 
 										normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
-										rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "lightDir"), []float32{normal.X, normal.Y, normal.Z}, rl.ShaderUniformVec3)
 									*/
+
 									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, blockTypes[voxel.Type].Color)
 								}
 							}

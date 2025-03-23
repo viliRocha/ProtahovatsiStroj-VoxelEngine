@@ -6,7 +6,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 
 ##  Features 🌟
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
-- **Dynamic Lighting**: Implemented basic lighting with ambient occlusion for better depth perception.
+- **Dynamic Lighting**: Implemented basic lighting with shading and ambient occlusion for better depth perception.
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Precedurally generated trees and randomly placed flowers and tall grass.
 - **Cache System**: Efficiently store the position of surface features for better world consitecy.

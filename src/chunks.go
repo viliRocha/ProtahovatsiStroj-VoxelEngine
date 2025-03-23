@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 
 	"github.com/aquilax/go-perlin"
@@ -40,6 +42,11 @@ var blockTypes = map[string]BlockProperties{
 	},
 	"Dirt": {
 		Color:     rl.Brown,
+		IsSolid:   true,
+		IsVisible: true,
+	},
+	"Sand": {
+		Color:     rl.NewColor(236, 221, 178, 255), //	Beige
 		IsSolid:   true,
 		IsVisible: true,
 	},
@@ -167,8 +174,7 @@ func generatePlants(chunk *Chunk, chunkPos rl.Vector3, reusePlants bool) {
 	}
 }
 
-/*
-func applyLSystem(iterations int) string {
+func genTreePattern(iterations int) string {
 	axiom := "X"
 	rules := map[rune]string{
 		'X': "F[-X][X]F[-X]+X",
@@ -186,65 +192,125 @@ func applyLSystem(iterations int) string {
 		}
 		result = newResult
 	}
-	//fmt.Println("L-system result:", result) // Debug output
+	fmt.Println("L-system result:", result) // Debug output
 	return result
 }
 
-func generateTrees(chunk *Chunk, startPosition rl.Vector3, lSystem string) {
-	stack := make([][2]rl.Vector3, 0) // Array to hold both position and direction
-	position := startPosition
-	direction := rl.NewVector3(0, 1, 0) // Initial direction is upwards
+func parseLSystemRule(ruleStr string) map[rune]string {
+	rules := make(map[rune]string)
+	parts := strings.Split(ruleStr, "=")
+	if len(parts) == 2 {
+		rules[rune(parts[0][0])] = parts[1]
+	}
+	return rules
+}
 
-	for _, char := range lSystem {
-		//fmt.Printf("Processing char: %c, Position: %v, Direction: %v\n", char, position, direction) // Debug output
-
-		switch char {
-		case 'F':
-			if position.Y >= 0 && int(position.Y) < chunkSize {
-				chunk.Voxels[int(position.X)][int(position.Y)][int(position.Z)] = VoxelData{Type: "Wood"}
-				position.X += direction.X
-				position.Y += direction.Y
-				position.Z += direction.Z
+func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
+	result := axiom
+	for i := 0; i < iterations; i++ {
+		newResult := ""
+		for _, char := range result {
+			if replacement, ok := rules[char]; ok {
+				newResult += replacement
+			} else {
+				newResult += string(char)
 			}
-		case '-':
-			// Turn left
-			angle := -math.Pi / 4 // Adjust the angle as needed
-			direction = rl.NewVector3(
-				direction.X*float32(math.Cos(angle))-direction.Z*float32(math.Sin(angle)),
-				direction.Y,
-				direction.X*float32(math.Sin(angle))+direction.Z*float32(math.Cos(angle)),
-			)
-		case '+':
-			// Turn right
-			angle := math.Pi / 4 // Adjust the angle as needed
-			direction = rl.NewVector3(
-				direction.X*float32(math.Cos(angle))-direction.Z*float32(math.Sin(angle)),
-				direction.Y,
-				direction.X*float32(math.Sin(angle))+direction.Z*float32(math.Cos(angle)),
-			)
-		case '[':
-			// Save the current position and direction
-			stack = append(stack, [2]rl.Vector3{position, direction})
-		case ']':
-			// Restore the last saved position and direction
-			if len(stack) > 0 {
-				position, direction = stack[len(stack)-1][0], stack[len(stack)-1][1]
-				stack = stack[:len(stack)-1]
+		}
+		result = newResult
+	}
+	return result
+}
+
+func placeTree(chunk *Chunk, position rl.Vector3, treeStructure string) {
+	stack := []rl.Vector3{position} // Array to hold both position and direction
+	currentPos := position
+
+	for _, char := range treeStructure {
+		switch char {
+		case 'F': // Create wood blocks for tree tunks
+			//	Gurantee values are within the limits
+			if int(currentPos.X) >= 0 && int(currentPos.X) < chunkSize &&
+				int(currentPos.Y) >= 0 && int(currentPos.Y) < chunkSize &&
+				int(currentPos.Z) >= 0 && int(currentPos.Z) < chunkSize {
+				chunk.Voxels[int(currentPos.X)][int(currentPos.Y)][int(currentPos.Z)] = VoxelData{Type: "Wood"}
+			}
+
+			currentPos.Y += 1 // Going up a level
+		case '+': // Turn right
+			currentPos.X += 1
+		case '-': // Turn left
+			currentPos.X -= 1
+		case '[': // Save the current position and direction
+			stack = append(stack, currentPos)
+		case ']': // Restore the last saved position and direction
+			currentPos = stack[len(stack)-1]
+			stack = stack[:len(stack)-1] // Remove o último item da pilha
+		}
+	}
+}
+
+func generateTrees(chunk *Chunk, lsystemRule string) {
+	rules := parseLSystemRule(lsystemRule)
+
+	treeStructure := applyLSystem("F", rules, 2)
+
+	treeCount := rand.Intn(3)
+
+	for i := 0; i < treeCount; i++ {
+		x := rand.Intn(chunkSize)
+		z := rand.Intn(chunkSize)
+
+		// Iterate over the chunk to find the surface height of the terrain
+		surfaceY := -1
+		for y := chunkSize - 1; y >= 0; y-- {
+			if blockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
+				surfaceY = y
+				break
 			}
 		}
 
-		// Print current position and direction after processing the character
-		//fmt.Printf("After processing char: %c, Position: %v, Direction: %v\n", char, position, direction) // Debug output
+		// Make sure the surface is valid and not in the water
+		if surfaceY > 13 {
+			treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
+
+			// Build the tree with the generated structure
+			placeTree(chunk, treePos, treeStructure)
+		}
 	}
 }
-*/
 
-func addWater(chunk *Chunk) {
+func genWaterFormations(chunk *Chunk) {
+	// Creates a Perlin Noise generator
+	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
+
 	for x := 0; x < chunkSize; x++ {
 		for z := 0; z < chunkSize; z++ {
 			//	Water shouldn't replace solid blocks (go through them)
 			if chunk.Voxels[x][13][z].Type == "Air" {
 				chunk.Voxels[x][13][z] = VoxelData{Type: "Water"}
+
+				for y := 0; y < chunkSize; y++ {
+					// Checks adjacent blocks for generating sand
+					for dy := -3; dy <= 1; dy++ {
+						for dx := -3; dx <= 3; dx++ {
+							adjX := x + dx
+							adjZ := z + dy
+
+							//	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
+							if adjX >= 0 && adjX < chunkSize && adjZ >= 0 && adjZ < chunkSize {
+								// Generate a Perlin Noise value
+								noiseValue := perlinNoise.Noise2D(float64(adjX)/10, float64(adjZ)/10)
+
+								if chunk.Voxels[adjX][y][adjZ].Type == "Grass" || chunk.Voxels[adjX][y][adjZ].Type == "Dirt" {
+									// Replaces dirt and grass with sand
+									if noiseValue > 0.32 {
+										chunk.Voxels[adjX][y][adjZ] = VoxelData{Type: "Sand"}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -264,7 +330,8 @@ func generateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 				if isSolid {
 					chunk.Voxels[x][y][z] = VoxelData{Type: "Dirt"}
 
-					if y == height {
+					//	Grass shoulden't generate under water
+					if y == height && y > 12 {
 						chunk.Voxels[x][y][z] = VoxelData{Type: "Grass"}
 					} else if y <= height-5 {
 						chunk.Voxels[x][y][z] = VoxelData{Type: "Stone"}
@@ -278,35 +345,13 @@ func generateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
 
-	//generateTrees(chunk, rl.Vector3{X: float32(rand.Intn(chunkSize)), Y: float32(chunkSize - 1), Z: float32(rand.Intn(chunkSize))}, applyLSystem(4))
+	generateTrees(chunk, "F=F[+F[+F]F[-F]]F[-F[+F]F[-F]]")
 
 	// Add water to specific layer
-	addWater(chunk)
+	genWaterFormations(chunk)
 
 	return chunk
 }
-
-/*
-func generateUndergroundChunk(position rl.Vector3, p *perlin.Perlin) *Chunk {
-	chunk := &Chunk{}
-
-	for x := 0; x < chunkSize; x++ {
-		for z := 0; z < chunkSize; z++ {
-			for y := 0; y < chunkSize; y++ {
-				isSolid := y <= calculateHeight(position, p, x, z)
-
-				if isSolid {
-					chunk.Voxels[x][y][z] = VoxelData{Type: "Dirt"}
-				} else {
-					chunk.Voxels[x][y][z] = VoxelData{Type: "Air"}
-				}
-			}
-		}
-	}
-
-	return chunk
-}
-*/
 
 func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
 	noiseValue := p.Noise2D(float64(position.X+float32(x))*perlinFrequency, float64(position.Z+float32(z))*perlinFrequency)

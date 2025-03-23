@@ -29,9 +29,11 @@ type Game struct {
 }
 
 func loadShader() rl.Shader {
-	shader := rl.LoadShader("./shaders/occlusion.vs", "./shaders/occlusion.fs")
-	lightDir := rl.NewVector3(1.0, -1.0, 1.0)
-	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "lightDir"), []float32{lightDir.X, lightDir.Y, lightDir.Z}, rl.ShaderUniformVec3)
+	shader := rl.LoadShader("./shaders/shading.vs", "./shaders/shading.fs")
+
+	//lightDir := rl.NewVector3(0.0, -1.0, 1.0) // Luz vindo de cima e da diagonal
+	//rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "lightDir"), []float32{lightDir.X, lightDir.Y, lightDir.Z}, rl.ShaderUniformVec3)
+
 	return shader
 }
 
