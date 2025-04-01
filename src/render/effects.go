@@ -1,7 +1,9 @@
-package main
+package render
+
+import "go-engine/src/pkg"
 
 // Calculate ambient occlusion based on neighbors
-func calculateAmbientOcclusion(chunk *Chunk, x, y, z int) float32 {
+func calculateAmbientOcclusion(chunk *pkg.Chunk, x, y, z int) float32 {
 	occlusion := 0.0
 	neighbors := []struct{ X, Y, Z int }{
 		{X: x - 1, Y: y, Z: z},
@@ -24,6 +26,6 @@ func calculateAmbientOcclusion(chunk *Chunk, x, y, z int) float32 {
 }
 
 // Make sure that the position is valid in the chunk
-func isValidPosition(chunk *Chunk, x, y, z int) bool {
-	return x >= 0 && x < chunkSize && y >= 0 && y < chunkSize && z >= 0 && z < chunkSize
+func isValidPosition(chunk *pkg.Chunk, x, y, z int) bool {
+	return x >= 0 && x < pkg.ChunkSize && y >= 0 && y < pkg.ChunkSize && z >= 0 && z < pkg.ChunkSize
 }

@@ -1,31 +1,35 @@
 package main
 
 import (
+	"go-engine/src/load"
+	"go-engine/src/render"
+	"go-engine/src/world"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func main() {
-	game := initGame()
+	game := load.InitGame()
 
 	// Main game loop
 	for !rl.WindowShouldClose() {
 		//  Update
 		if rl.IsKeyPressed(rl.KeyOne) {
-			game.cameraMode = rl.CameraFree
-			game.camera.Up = rl.Vector3{X: 0.0, Y: 1.0, Z: 0.0} // Reset roll
+			game.CameraMode = rl.CameraFree
+			game.Camera.Up = rl.Vector3{X: 0.0, Y: 1.0, Z: 0.0} // Reset roll
 		}
 
 		if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			rl.DisableCursor()
 		}
 
-		rl.UpdateCamera(&game.camera, game.cameraMode)
+		rl.UpdateCamera(&game.Camera, game.CameraMode)
 
 		// Manage chunks based on player's position
-		manageChunks(game.camera.Position, game.chunkCache, game.perlinNoise) // Passing perlinNoise
+		world.ManageChunks(game.Camera.Position, game.ChunkCache, game.PerlinNoise) // Passing perlinNoise
 
 		//  Draw
-		renderGame(&game)
+		render.RenderGame(&game)
 	}
 
 	// After the loop ends:

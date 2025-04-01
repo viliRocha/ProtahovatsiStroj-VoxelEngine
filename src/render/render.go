@@ -1,26 +1,30 @@
-package main
+package render
 
 import (
 	"fmt"
 
+	"go-engine/src/load"
+	"go-engine/src/pkg"
+	"go-engine/src/world"
+
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
+func shouldDrawFace(chunk *pkg.Chunk, x, y, z, faceIndex int) bool {
 	// If there is no chunk below, hide the base
 	if y == 0 && chunk.Neighbors[5] == nil {
 		return false
 	}
 
-	direction := faceDirections[faceIndex]
+	direction := pkg.FaceDirections[faceIndex]
 
 	//  Calculates the new coordinates based on the face direction
 	newX, newY, newZ := x+int(direction.X), y+int(direction.Y), z+int(direction.Z)
 
 	// Checks if the new coordinates are within the chunk bounds
-	if newX >= 0 && newX < chunkSize && newY >= 0 && newY < chunkSize && newZ >= 0 && newZ < chunkSize {
+	if newX >= 0 && newX < pkg.ChunkSize && newY >= 0 && newY < pkg.ChunkSize && newZ >= 0 && newZ < pkg.ChunkSize {
 		// Returns true if the neighboring voxel is not solid
-		return !blockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
+		return !world.BlockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
 	}
 
 	if chunk.Neighbors[faceIndex] == nil {
@@ -32,41 +36,39 @@ func shouldDrawFace(chunk *Chunk, x, y, z, faceIndex int) bool {
 	case 0: // Right (X+)
 		newX = 0
 	case 1: // Left (X-)
-		newX = chunkSize - 1
+		newX = pkg.ChunkSize - 1
 	case 2: // Top (Y+)
 		newY = 0
 	case 3: // Bottom (Y-)
-		newY = chunkSize - 1
+		newY = pkg.ChunkSize - 1
 	case 4: // Front (Z+)
 		newZ = 0
 	case 5: // Back (Z-)
-		newZ = chunkSize - 1
+		newZ = pkg.ChunkSize - 1
 	}
 
-	return !blockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
+	return !world.BlockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
 }
 
-func renderVoxels(game *Game, renderTransparent bool) {
+func RenderVoxels(game *load.Game, renderTransparent bool) {
 	if renderTransparent {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
-
 	/*
-		view := rl.GetCameraMatrix(game.camera)
-		projection := rl.GetCameraMatrix(game.camera)
+		view := rl.GetCameraMatrix(game.Camera)
+		projection := rl.GetCameraMatrix(game.Camera)
 
-		rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_proj"), projection)
-		rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_view"), view)
+		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
+		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
 	*/
+	//projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 
-	//projection := rl.MatrixPerspective(game.camera.Fovy, float32(screenWidth)/float32(screenHeight), 0.01, 1000.0)
-
-	for chunkPosition, chunk := range game.chunkCache.chunks {
-		for x := 0; x < chunkSize; x++ {
-			for y := 0; y < chunkSize; y++ {
-				for z := 0; z < chunkSize; z++ {
+	for chunkPosition, chunk := range game.ChunkCache.Chunks {
+		for x := 0; x < pkg.ChunkSize; x++ {
+			for y := 0; y < pkg.ChunkSize; y++ {
+				for z := 0; z < pkg.ChunkSize; z++ {
 					voxel := chunk.Voxels[x][y][z]
-					if blockTypes[voxel.Type].IsVisible && (blockTypes[voxel.Type].Color.A < 255) == renderTransparent {
+					if world.BlockTypes[voxel.Type].IsVisible && (world.BlockTypes[voxel.Type].Color.A < 255) == renderTransparent {
 
 						voxelPosition := rl.NewVector3(chunkPosition.X+float32(x), chunkPosition.Y+float32(y), chunkPosition.Z+float32(z))
 						for i := 0; i < 6; i++ {
@@ -78,7 +80,7 @@ func renderVoxels(game *Game, renderTransparent bool) {
 								*/
 								/*
 									modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-									rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "m_model"), modelMatrix)
+									rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
 								*/
 
 								switch voxel.Type {
@@ -90,7 +92,7 @@ func renderVoxels(game *Game, renderTransparent bool) {
 
 									voxelPosition.Y += 0.5 // Reverts the setting for other operations
 								case "Water":
-									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), blockTypes[voxel.Type].Color)
+									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
 								default:
 									// Ambient occlusion
 									/*
@@ -109,7 +111,7 @@ func renderVoxels(game *Game, renderTransparent bool) {
 										normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
 									*/
 
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, blockTypes[voxel.Type].Color)
+									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, world.BlockTypes[voxel.Type].Color)
 								}
 							}
 						}
@@ -125,25 +127,25 @@ func renderVoxels(game *Game, renderTransparent bool) {
 	}
 }
 
-func renderGame(game *Game) {
+func RenderGame(game *load.Game) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.NewColor(150, 208, 233, 255)) //   Light blue
 
-	rl.BeginMode3D(game.camera)
+	rl.BeginMode3D(game.Camera)
 
-	//rl.BeginShaderMode(game.shader)
+	//rl.BeginShaderMode(game.Shader)
 
 	//	Begin drawing solid blocks and then transparent ones (avoid flickering)
-	renderVoxels(game, false)
+	RenderVoxels(game, false)
 
-	renderVoxels(game, true)
+	RenderVoxels(game, true)
 
 	//rl.EndShaderMode()
 
 	rl.EndMode3D()
 
 	// Apply light blue filter - for underwater
-	if game.camera.Position.Y < 13 {
+	if game.Camera.Position.Y < 13 {
 		rl.SetBlendMode(rl.BlendMode(0))
 		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
 	}
@@ -151,7 +153,7 @@ func renderGame(game *Game) {
 	// Draw debug text
 	rl.DrawFPS(10, 30)
 
-	positionText := fmt.Sprintf("Player's position: (%.2f, %.2f, %.2f)", game.camera.Position.X, game.camera.Position.Y, game.camera.Position.Z)
+	positionText := fmt.Sprintf("Player's position: (%.2f, %.2f, %.2f)", game.Camera.Position.X, game.Camera.Position.Y, game.Camera.Position.Z)
 	rl.DrawText(positionText, 10, 5, 20, rl.DarkGreen)
 
 	rl.EndDrawing()

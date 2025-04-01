@@ -1,16 +1,19 @@
-package main
+package load
 
 import (
 	"fmt"
 	"math/rand"
+
+	"go-engine/src/pkg"
+	"go-engine/src/world"
 
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 const (
-	screenWidth  int32 = 1000
-	screenHeight int32 = 480
+	ScreenWidth  int32 = 1000
+	ScreenHeight int32 = 480
 	//  Control of the intensity/amplitude of the noise
 	perlinAlpha = 3.0
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
@@ -20,11 +23,11 @@ const (
 )
 
 type Game struct {
-	camera      rl.Camera
-	cameraMode  rl.CameraMode
-	chunkCache  *ChunkCache
-	perlinNoise *perlin.Perlin
-	//shader      rl.Shader
+	Camera      rl.Camera
+	CameraMode  rl.CameraMode
+	ChunkCache  *world.ChunkCache
+	PerlinNoise *perlin.Perlin
+	//Shader      rl.Shader
 	//lightPosition rl.Vector3
 }
 
@@ -37,9 +40,9 @@ func loadShader() rl.Shader {
 	return shader
 }
 
-func initGame() Game {
+func InitGame() Game {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
-	rl.InitWindow(screenWidth, screenHeight, "Protahovatsi Stroj - Basic Voxel Game")
+	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Basic Voxel Game")
 
 	camera := rl.Camera{
 		Position:   rl.NewVector3(2.79, 19.45, 10.0),
@@ -56,23 +59,23 @@ func initGame() Game {
 
 	//	Load .vox models
 	for i := 0; i < 4; i++ {
-		plantModels[i] = rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", i))
+		pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", i))
 	}
 
 	//lightPosition := rl.NewVector3(5, 5, 5)
 	//shader := loadShader()
 
-	chunkCache := NewChunkCache()                                                                                    // Initialize ChunkCache
-	chunkCache.chunks[rl.NewVector3(0, 0, 0)] = generateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
+	chunkCache := world.NewChunkCache()                                                                                    // Initialize ChunkCache
+	chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
 
 	rl.SetTargetFPS(120)
 
 	return Game{
-		camera:      camera,
-		cameraMode:  cameraMode,
-		chunkCache:  chunkCache,
-		perlinNoise: perlinNoise,
-		//shader:      shader,
+		Camera:      camera,
+		CameraMode:  cameraMode,
+		ChunkCache:  chunkCache,
+		PerlinNoise: perlinNoise,
+		//Shader:      shader,
 		//lightPosition: lightPosition,
 	}
 }

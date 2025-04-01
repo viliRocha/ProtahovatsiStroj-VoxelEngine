@@ -9,7 +9,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Dynamic Lighting**: Implemented basic lighting with shading and ambient occlusion for better depth perception.
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Precedurally generated trees and randomly placed flowers and tall grass.
-- **Cache System**: Efficiently store the position of surface features for better world consitecy.
+- **Cache System**: Efficiently store the position of surface features for better world consistecy.
 
 ## Upcoming Features 📋
 - **Layered Landscapes**: Add more geological layers, such as stone.
