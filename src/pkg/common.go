@@ -7,8 +7,9 @@ import (
 var PlantModels [4]rl.Model
 
 const (
-	ChunkSize     int = 32
-	ChunkDistance int = 1
+	ChunkSize          int     = 32
+	ChunkDistance      int     = 1
+	WaterLevelFraction float64 = 0.375 // 3/8
 )
 
 type VoxelData struct {

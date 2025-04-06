@@ -2,6 +2,7 @@ package world
 
 import (
 	"go-engine/src/pkg"
+	"math/rand"
 
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -9,8 +10,24 @@ import (
 
 const perlinFrequency = 0.03
 
+func chooseRandomTree() string {
+	model := rand.Intn(10)
+
+	switch {
+	case model > 4:
+		return "F=F[FA(3)L][FA(3)L][FA(3)L]A(3)"
+
+	case model < 2:
+		return "F=F[A(3)L]F[-A(2)L]F[/A(2)L]F[+A(1)L]"
+	default:
+		return "F=FFF[FA(3)L][FA(3)L][FA(3)L]"
+	}
+}
+
 func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants bool) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
+
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	for x := 0; x < pkg.ChunkSize; x++ {
 		for z := 0; z < pkg.ChunkSize; z++ {
@@ -23,8 +40,8 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 				if isSolid {
 					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
 
-					//	Grass shoulden't generate under water
-					if y == height && y > 12 {
+					//	Grass shouldn't generate under water
+					if y == height && y > waterLevel {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
 					} else if y <= height-5 {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
@@ -38,7 +55,7 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
 
-	generateTrees(chunk, "F=FF[-F][+F]FF" /*, "F=+(25)F-(25)[A(2)]"*/)
+	generateTrees(chunk, chooseRandomTree())
 
 	// Add water to specific layer
 	genWaterFormations(chunk)

@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.8
+### v0.9.0
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -8,11 +8,10 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
 - **Dynamic Lighting**: Implemented basic lighting with shading and ambient occlusion for better depth perception.
 - **Water Formations**: Realistic water bodies.
-- **Surface Feature System**: Precedurally generated trees and randomly placed flowers and tall grass.
+- **Surface Feature System**: Precedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
 - **Cache System**: Efficiently store the position of surface features for better world consistecy.
 
 ## Upcoming Features 📋
-- **Layered Landscapes**: Add more geological layers, such as stone.
 - **Fog Effects**: Create atmospheric depth with fog.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes for a richer exploration experience.
@@ -20,9 +19,10 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
-<img src="./img/lighting.png" alt="light" width="1000px">
-<img src="./img/landscape1.png" alt="world_gen" width="1000px">
-<img src="./img/landscape2.png" alt="world_gen" width="1000px">
+<img src="./img/lighting2.png" alt="light" width="1000px">
+<img src="./img/landscape3.png" alt="world_gen" width="1000px">
+<img src="./img/landscape4.png" alt="world_gen" width="1000px">
+> **Note**: The FPS displayed in some of these images seems to be very low. We are aware of this and are working on optimizations for the next versions, nonetheless, suggestions and optimizations are welcome!
 
 ## Getting Started 🚀
 To get started with the voxel engine, clone the repository and open the folder. Make sure you have Go installed on your device. Then, run the command `go mod tidy` and finally, to compile the project, run `go run ./src`.

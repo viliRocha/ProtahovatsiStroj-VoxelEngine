@@ -74,10 +74,8 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 						for i := 0; i < 6; i++ {
 							//	Face culling
 							if shouldDrawFace(chunk, x, y, z, i) {
-								/*
-									lightIntensity := calculateLightIntensity(voxelPosition, game.lightPosition)
-									voxelColor := applyLighting(blockTypes[voxel.Type].Color, lightIntensity)
-								*/
+								lightIntensity := calculateLightIntensity(voxelPosition, game.LightPosition)
+								voxelColor := applyLighting(world.BlockTypes[voxel.Type].Color, lightIntensity)
 								/*
 									modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
 									rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
@@ -92,7 +90,7 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 
 									voxelPosition.Y += 0.5 // Reverts the setting for other operations
 								case "Water":
-									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
+									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), voxelColor)
 								default:
 									// Ambient occlusion
 									/*
@@ -111,7 +109,7 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 										normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
 									*/
 
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, world.BlockTypes[voxel.Type].Color)
+									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, voxelColor)
 								}
 							}
 						}
@@ -128,6 +126,8 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 }
 
 func RenderGame(game *load.Game) {
+	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.NewColor(150, 208, 233, 255)) //   Light blue
 
@@ -145,7 +145,7 @@ func RenderGame(game *load.Game) {
 	rl.EndMode3D()
 
 	// Apply light blue filter - for underwater
-	if game.Camera.Position.Y < 13 {
+	if game.Camera.Position.Y < float32(waterLevel) {
 		rl.SetBlendMode(rl.BlendMode(0))
 		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
 	}
@@ -159,10 +159,9 @@ func RenderGame(game *load.Game) {
 	rl.EndDrawing()
 }
 
-/*
 func calculateLightIntensity(voxelPosition, lightPosition rl.Vector3) float32 {
 	distance := rl.Vector3Distance(voxelPosition, lightPosition)
-	return rl.Clamp(1.0/(distance*distance+1)*50, 0, 1)// Adjusted intensity scale
+	return rl.Clamp(1.0/(distance*distance+1)*50, 0, 1) // Adjusted intensity scale
 }
 
 func applyLighting(color rl.Color, intensity float32) rl.Color {
@@ -173,4 +172,3 @@ func applyLighting(color rl.Color, intensity float32) rl.Color {
 		255,
 	)
 }
-*/

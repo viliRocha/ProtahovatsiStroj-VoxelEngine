@@ -28,7 +28,7 @@ type Game struct {
 	ChunkCache  *world.ChunkCache
 	PerlinNoise *perlin.Perlin
 	//Shader      rl.Shader
-	//lightPosition rl.Vector3
+	LightPosition rl.Vector3
 }
 
 func loadShader() rl.Shader {
@@ -62,7 +62,7 @@ func InitGame() Game {
 		pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", i))
 	}
 
-	//lightPosition := rl.NewVector3(5, 5, 5)
+	LightPosition := rl.NewVector3(0, 6, 0)
 	//shader := loadShader()
 
 	chunkCache := world.NewChunkCache()                                                                                    // Initialize ChunkCache
@@ -76,6 +76,6 @@ func InitGame() Game {
 		ChunkCache:  chunkCache,
 		PerlinNoise: perlinNoise,
 		//Shader:      shader,
-		//lightPosition: lightPosition,
+		LightPosition: LightPosition,
 	}
 }
