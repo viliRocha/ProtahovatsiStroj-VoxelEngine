@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const perlinFrequency = 0.03
+const perlinFrequency = 0.09
 
 func chooseRandomTree() string {
 	model := rand.Intn(10)
@@ -29,12 +29,12 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for z := 0; z < pkg.ChunkSize; z++ {
+	for x := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
 			// Use Perlin noise to generate the height of the terrain
 			height := calculateHeight(position, p, x, z)
 
-			for y := 0; y < pkg.ChunkSize; y++ {
+			for y := range pkg.ChunkSize {
 				isSolid := y <= height
 
 				if isSolid {
@@ -52,6 +52,8 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 			}
 		}
 	}
+	//fmt.Println(len(chunk.Plants))
+
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
 

@@ -1,6 +1,7 @@
 package world
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"strconv"
@@ -68,12 +69,25 @@ var BlockTypes = map[string]BlockProperties{
 
 // Generate vegetation at random surface positions
 func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
+	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+
 	if reusePlants {
+		fmt.Println("Reusing plants:", len(chunk.Plants))
 		for _, plant := range chunk.Plants {
-			chunk.Voxels[int(plant.Position.X)%pkg.ChunkSize][int(plant.Position.Y)][int(plant.Position.Z)%pkg.ChunkSize] = pkg.VoxelData{Type: "Plant", Model: plant.Model}
+			x := mod(int(plant.Position.X), pkg.ChunkSize)
+			y := int(plant.Position.Y)
+			z := mod(int(plant.Position.Z), pkg.ChunkSize)
+
+			chunk.Voxels[x][y][z] = pkg.VoxelData{
+				Type:  "Plant",
+				Model: pkg.PlantModels[plant.ModelID],
+			}
+
+			chunk.Plants = append(chunk.Plants, plant)
 		}
+		return
 	} else {
-		plantCount := rand.Intn(40)
+		plantCount := rand.Intn(pkg.ChunkSize / 2)
 
 		for i := 0; i < plantCount; i++ {
 			x := rand.Intn(pkg.ChunkSize)
@@ -83,18 +97,28 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 			for y := pkg.ChunkSize - 1; y >= 0; y-- {
 				if BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
 					// Ensure plants are only placed above layer 13 (water)
-					if y < pkg.ChunkSize && y > 13 {
+					if y < pkg.ChunkSize && y > waterLevel {
 						//  Randomly define a model for the plant
 						randomModel := rand.Intn(4) // 0 - 3
-						chunk.Voxels[x][y+1][z] = pkg.VoxelData{Type: "Plant", Model: pkg.PlantModels[randomModel]}
+						chunk.Voxels[x][y+1][z] = pkg.VoxelData{
+							Type:  "Plant",
+							Model: pkg.PlantModels[randomModel],
+						}
 						plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
-						chunk.Plants = append(chunk.Plants, pkg.PlantData{Position: plantPos, Model: pkg.PlantModels[randomModel]})
+						chunk.Plants = append(chunk.Plants, pkg.PlantData{
+							Position: plantPos,
+							ModelID:  randomModel,
+						})
 					}
 					break
 				}
 			}
 		}
 	}
+}
+
+func mod(a, b int) int {
+	return (a%b + b) % b
 }
 
 func parseLSystemRule(ruleStr string) map[rune]string {
@@ -139,7 +163,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 		case 'F': // Create wood blocks for tree tunks
 			//	Gurantee values are within bounds
 			if int(currentPos.X) >= 0 && int(currentPos.X) < pkg.ChunkSize &&
-				int(currentPos.Y) >= 0 && int(currentPos.Y) < pkg.ChunkSize &&
+				int(currentPos.Y) >= 0 && int(currentPos.Y) < pkg.ChunkHeight &&
 				int(currentPos.Z) >= 0 && int(currentPos.Z) < pkg.ChunkSize {
 				chunk.Voxels[int(currentPos.X)][int(currentPos.Y)][int(currentPos.Z)] = pkg.VoxelData{Type: "Wood"}
 			}
@@ -202,7 +226,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 							// Ensures that the blocks position is within bounds
 							if int(newPos.X) >= 0 && int(newPos.X) < pkg.ChunkSize &&
-								int(newPos.Y) >= 0 && int(newPos.Y) < pkg.ChunkSize &&
+								int(newPos.Y) >= 0 && int(newPos.Y) < pkg.ChunkHeight &&
 								int(newPos.Z) >= 0 && int(newPos.Z) < pkg.ChunkSize {
 								chunk.Voxels[int(newPos.X)][int(newPos.Y)][int(newPos.Z)] = pkg.VoxelData{Type: "Wood"}
 							}
@@ -220,7 +244,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 			numLeaves := 30
 			radius := 2.0 // Radius of the leaf circle
 
-			for i := 0; i < numLeaves; i++ {
+			for i := range numLeaves {
 				angle := float64(i) * (2 * math.Pi / float64(numLeaves)) // Calculate leaf cluster angle
 				leafPos := rl.Vector3{
 					currentPos.X + float32(radius*math.Cos(angle)),
@@ -229,7 +253,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 				}
 
 				if int(leafPos.X) >= 0 && int(leafPos.X) < pkg.ChunkSize &&
-					int(leafPos.Y) >= 0 && int(leafPos.Y) < pkg.ChunkSize &&
+					int(leafPos.Y) >= 0 && int(leafPos.Y) < pkg.ChunkHeight &&
 					int(leafPos.Z) >= 0 && int(leafPos.Z) < pkg.ChunkSize {
 
 					chunk.Voxels[int(leafPos.X)][int(leafPos.Y)][int(leafPos.Z)] = pkg.VoxelData{Type: "Leaves"}
@@ -246,7 +270,7 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 
 	treeStructure := applyLSystem("F", rules, 2)
 
-	treeCount := rand.Intn(4)
+	treeCount := rand.Intn(pkg.ChunkSize / 8)
 
 	for range treeCount {
 		x := rand.Intn(pkg.ChunkSize)
@@ -255,7 +279,7 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 		// Iterate over the chunk to find the surface height of the terrain
 		surfaceY := -1
 		for y := pkg.ChunkSize - 1; y >= 0; y-- {
-			if BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
+			if chunk.Voxels[x][y][z].Type == "Grass" {
 				surfaceY = y
 				break
 			}
@@ -277,13 +301,13 @@ func genWaterFormations(chunk *pkg.Chunk) {
 	// Creates a Perlin Noise generator
 	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for z := 0; z < pkg.ChunkSize; z++ {
+	for x := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
 			//	Water shouldn't replace solid blocks (go through them)
 			if chunk.Voxels[x][waterLevel][z].Type == "Air" {
 				chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
 
-				for y := 0; y < pkg.ChunkSize; y++ {
+				for y := range pkg.ChunkSize {
 					// Checks adjacent blocks for generating sand
 					for dy := -3; dy <= 1; dy++ {
 						for dx := -3; dx <= 3; dx++ {

@@ -19,7 +19,7 @@ const (
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
 	perlinBeta = 1.5
 	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
-	perlinN = int32(3)
+	perlinN = int32(2)
 )
 
 type Game struct {
@@ -28,7 +28,7 @@ type Game struct {
 	ChunkCache  *world.ChunkCache
 	PerlinNoise *perlin.Perlin
 	//Shader      rl.Shader
-	LightPosition rl.Vector3
+	//LightPosition rl.Vector3
 }
 
 func loadShader() rl.Shader {
@@ -42,7 +42,7 @@ func loadShader() rl.Shader {
 
 func InitGame() Game {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
-	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Basic Voxel Game")
+	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Voxel Game")
 
 	camera := rl.Camera{
 		Position:   rl.NewVector3(2.79, 19.45, 10.0),
@@ -58,17 +58,17 @@ func InitGame() Game {
 	perlinNoise := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed)
 
 	//	Load .vox models
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("./assets/plants/plant_%d.vox", i))
 	}
 
-	LightPosition := rl.NewVector3(0, 6, 0)
+	//LightPosition := rl.NewVector3(0, 6, 0)
 	//shader := loadShader()
 
 	chunkCache := world.NewChunkCache()                                                                                    // Initialize ChunkCache
 	chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
 
-	rl.SetTargetFPS(120)
+	rl.SetTargetFPS(40)
 
 	return Game{
 		Camera:      camera,
@@ -76,6 +76,6 @@ func InitGame() Game {
 		ChunkCache:  chunkCache,
 		PerlinNoise: perlinNoise,
 		//Shader:      shader,
-		LightPosition: LightPosition,
+		//LightPosition: LightPosition,
 	}
 }

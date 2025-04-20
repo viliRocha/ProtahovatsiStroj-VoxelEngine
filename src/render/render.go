@@ -64,52 +64,62 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 	//projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
-		for x := 0; x < pkg.ChunkSize; x++ {
-			for y := 0; y < pkg.ChunkSize; y++ {
-				for z := 0; z < pkg.ChunkSize; z++ {
+		for x := range pkg.ChunkSize {
+			for y := range pkg.ChunkHeight {
+				for z := range pkg.ChunkSize {
 					voxel := chunk.Voxels[x][y][z]
 					if world.BlockTypes[voxel.Type].IsVisible && (world.BlockTypes[voxel.Type].Color.A < 255) == renderTransparent {
 
 						voxelPosition := rl.NewVector3(chunkPosition.X+float32(x), chunkPosition.Y+float32(y), chunkPosition.Z+float32(z))
-						for i := 0; i < 6; i++ {
-							//	Face culling
-							if shouldDrawFace(chunk, x, y, z, i) {
+						for i := range 6 {
+							/*
 								lightIntensity := calculateLightIntensity(voxelPosition, game.LightPosition)
 								voxelColor := applyLighting(world.BlockTypes[voxel.Type].Color, lightIntensity)
+							*/
+							/*
+								modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+								rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
+							*/
+
+							switch voxel.Type {
+							case "Plant":
+								//	Plants are smaller than normal voxels, decrease their heigth so they touch the ground
+								voxelPosition.Y -= 0.5
+
+								rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+
+								voxelPosition.Y += 0.5 // Reverts the setting for other operations
+							case "Water":
+								rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
+							default:
+								// Ambient occlusion
 								/*
-									modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-									rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
+									rl.PushMatrix()
+									rl.Translatef(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+									model := rl.GetMatrixModelview()
+									rl.PopMatrix()
+
+									mvp := rl.MatrixMultiply(projection, rl.MatrixMultiply(view, model))
+									rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "mvp"), mvp)
+
+									voxelColor := blockTypes[voxel.Type].Color
+									color := []float32{float32(voxelColor.R) / 255.0, float32(voxelColor.G) / 255.0, float32(voxelColor.B) / 255.0, float32(voxelColor.A) / 255.0}
+									rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "color"), color, rl.ShaderUniformVec4)
+
+									normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
 								*/
-
-								switch voxel.Type {
-								case "Plant":
-									//	Plants are smaller than normal voxels, decrease their heigth so they touch the ground
-									voxelPosition.Y -= 0.5
-
-									rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
-
-									voxelPosition.Y += 0.5 // Reverts the setting for other operations
-								case "Water":
-									rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), voxelColor)
-								default:
-									// Ambient occlusion
+								//	Face culling
+								if shouldDrawFace(chunk, x, y, z, i) {
 									/*
-										rl.PushMatrix()
-										rl.Translatef(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-										model := rl.GetMatrixModelview()
-										rl.PopMatrix()
+										// Calculates face displacement
+										offset := rl.NewVector3(pkg.FaceDirections[i].X*0.5, pkg.FaceDirections[i].Y*0.5, pkg.FaceDirections[i].Z*0.5)
 
-										mvp := rl.MatrixMultiply(projection, rl.MatrixMultiply(view, model))
-										rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "mvp"), mvp)
+										// Calculates the new position of the face with the offset
+										facePosition := rl.NewVector3(voxelPosition.X+offset.X, voxelPosition.Y+offset.Y, voxelPosition.Z+offset.Z)
 
-										voxelColor := blockTypes[voxel.Type].Color
-										color := []float32{float32(voxelColor.R) / 255.0, float32(voxelColor.G) / 255.0, float32(voxelColor.B) / 255.0, float32(voxelColor.A) / 255.0}
-										rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "color"), color, rl.ShaderUniformVec4)
-
-										normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
+										// Adjusts the scales of visible faces
 									*/
-
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, voxelColor)
+									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, world.BlockTypes[voxel.Type].Color)
 								}
 							}
 						}

@@ -26,8 +26,11 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 	defer cc.CacheMutex.Unlock()
 
 	if chunk, exists := cc.Chunks[position]; exists {
-		GenerateAbovegroundChunk(position, p, true)
-		return chunk
+		// Reuses plants from saved chunk
+		updatedChunk := GenerateAbovegroundChunk(position, p, true)
+		updatedChunk.Plants = chunk.Plants // Reassigns the old plants
+		cc.Chunks[position] = updatedChunk
+		return updatedChunk
 	} else {
 		chunk := GenerateAbovegroundChunk(position, p, false)
 		cc.Chunks[position] = chunk
@@ -60,9 +63,12 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 			chunkPosition := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
 			if _, exists := chunkCache.Chunks[chunkPosition]; !exists {
 				wg.Add(1)
+				//fmt.Printf("Iniciando carregamento do chunk em %v...\n", chunkPosition)
 				go func(cp rl.Vector3) {
 					defer wg.Done()
+					//fmt.Printf("[%s] Carregando chunk em %v\n", time.Now().Format("15:04:05.000"), cp)
 					chunkCache.GetChunk(cp, p)
+					//fmt.Printf("[%s] Finalizou chunk em %v\n", time.Now().Format("15:04:05.000"), cp)
 				}(chunkPosition)
 			}
 		}
