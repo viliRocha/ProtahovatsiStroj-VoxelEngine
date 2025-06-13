@@ -56,7 +56,7 @@ var BlockTypes = map[string]BlockProperties{
 		IsVisible: true,
 	},
 	"Water": {
-		Color:     rl.NewColor(0, 0, 255, 60), // Transparent blue
+		Color:     rl.NewColor(0, 0, 255, 110), // Transparent blue
 		IsSolid:   false,
 		IsVisible: true,
 	},

@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const perlinFrequency = 0.09
+const perlinFrequency = 0.03
 
 func chooseRandomTree() string {
 	model := rand.Intn(10)
@@ -61,6 +61,9 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 
 	// Add water to specific layer
 	genWaterFormations(chunk)
+
+	// Marks the chunk as outdated so that the mesh can be generated
+	chunk.IsOutdated = true
 
 	return chunk
 }

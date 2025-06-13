@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"unsafe"
 
 	"go-engine/src/load"
 	"go-engine/src/pkg"
@@ -10,12 +11,85 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-func shouldDrawFace(chunk *pkg.Chunk, x, y, z, faceIndex int) bool {
-	// If there is no chunk below, hide the base
-	if y == 0 && chunk.Neighbors[5] == nil {
-		return false
+func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
+	var vertices []float32
+	var indices []uint16
+	var colors []uint8
+
+	indexOffset := uint16(0)
+
+	for x := 0; x < pkg.ChunkSize; x++ {
+		for y := 0; y < pkg.ChunkHeight; y++ {
+			for z := 0; z < pkg.ChunkSize; z++ {
+				voxel := chunk.Voxels[x][y][z]
+				block := world.BlockTypes[voxel.Type]
+
+				if !block.IsVisible {
+					continue
+				} else if voxel.Type == "Water" || voxel.Type == "Plant" {
+					continue
+				}
+
+				for face := 0; face < 6; face++ {
+					if !shouldDrawFace(chunk, x, y, z, face) {
+						continue
+					}
+
+					for i := 0; i < 4; i++ {
+						v := pkg.FaceVertices[face][i]
+						vertices = append(vertices,
+							float32(x)+v[0],
+							float32(y)+v[1],
+							float32(z)+v[2],
+						)
+
+						// Add color per vertex (RGBA)
+						c := block.Color
+						colors = append(colors, c.R, c.G, c.B, c.A)
+					}
+
+					//	Add the two triangles of the face
+					indices = append(indices,
+						indexOffset, indexOffset+1, indexOffset+2,
+						indexOffset, indexOffset+2, indexOffset+3,
+					)
+					indexOffset += 4
+				}
+			}
+		}
 	}
 
+	mesh := rl.Mesh{
+		VertexCount:   int32(len(vertices) / 3),
+		TriangleCount: int32(len(indices) / 3),
+	}
+
+	if len(vertices) > 0 {
+		mesh.Vertices = (*float32)(unsafe.Pointer(&vertices[0]))
+	}
+	if len(indices) > 0 {
+		mesh.Indices = (*uint16)(unsafe.Pointer(&indices[0]))
+	}
+	if len(colors) > 0 {
+		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
+	}
+
+	rl.UploadMesh(&mesh, false)
+	model := rl.LoadModelFromMesh(mesh)
+
+	// Create material and assign it
+	material := rl.LoadMaterialDefault()
+	materials := []rl.Material{material}
+	model.MaterialCount = int32(len(materials))
+	model.Materials = &materials[0]
+
+	// Assign to chunk
+	chunk.Model = model
+	chunk.HasMesh = true
+	chunk.IsOutdated = false
+}
+
+func shouldDrawFace(chunk *pkg.Chunk, x, y, z, faceIndex int) bool {
 	direction := pkg.FaceDirections[faceIndex]
 
 	//  Calculates the new coordinates based on the face direction
@@ -40,7 +114,8 @@ func shouldDrawFace(chunk *pkg.Chunk, x, y, z, faceIndex int) bool {
 	case 2: // Top (Y+)
 		newY = 0
 	case 3: // Bottom (Y-)
-		newY = pkg.ChunkSize - 1
+		//	No need to render the chunks bottom
+		return false
 	case 4: // Front (Z+)
 		newZ = 0
 	case 5: // Back (Z-)
@@ -60,69 +135,51 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 
 		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
 		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
+		projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 	*/
-	//projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
+		// Build mesh only once if needed
+		if chunk.IsOutdated {
+			BuildChunkMesh(chunk, chunkPosition)
+		}
+
+		// If the chunk has mesh, draw directly
+		if chunk.HasMesh && chunk.Model.MeshCount > 0 && chunk.Model.Meshes != nil {
+			rl.DrawModel(chunk.Model, chunkPosition, 1.0, rl.White)
+		}
+
 		for x := range pkg.ChunkSize {
 			for y := range pkg.ChunkHeight {
 				for z := range pkg.ChunkSize {
 					voxel := chunk.Voxels[x][y][z]
-					if world.BlockTypes[voxel.Type].IsVisible && (world.BlockTypes[voxel.Type].Color.A < 255) == renderTransparent {
+					block := world.BlockTypes[voxel.Type]
 
-						voxelPosition := rl.NewVector3(chunkPosition.X+float32(x), chunkPosition.Y+float32(y), chunkPosition.Z+float32(z))
-						for i := range 6 {
-							/*
-								lightIntensity := calculateLightIntensity(voxelPosition, game.LightPosition)
-								voxelColor := applyLighting(world.BlockTypes[voxel.Type].Color, lightIntensity)
-							*/
-							/*
-								modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-								rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
-							*/
+					if !block.IsVisible || (block.Color.A < 255) != renderTransparent {
+						continue
+					}
 
-							switch voxel.Type {
-							case "Plant":
-								//	Plants are smaller than normal voxels, decrease their heigth so they touch the ground
-								voxelPosition.Y -= 0.5
+					voxelPosition := rl.NewVector3(
+						chunkPosition.X+float32(x),
+						chunkPosition.Y+float32(y),
+						chunkPosition.Z+float32(z),
+					)
 
-								rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+					switch voxel.Type {
+					case "Plant":
+						rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
 
-								voxelPosition.Y += 0.5 // Reverts the setting for other operations
-							case "Water":
-								rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
-							default:
-								// Ambient occlusion
-								/*
-									rl.PushMatrix()
-									rl.Translatef(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-									model := rl.GetMatrixModelview()
-									rl.PopMatrix()
+					case "Water":
+						voxelPosition.X += 0.5
+						voxelPosition.Y += 0.5
+						voxelPosition.Z += 0.5
 
-									mvp := rl.MatrixMultiply(projection, rl.MatrixMultiply(view, model))
-									rl.SetShaderValueMatrix(game.shader, rl.GetShaderLocation(game.shader, "mvp"), mvp)
+						rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
 
-									voxelColor := blockTypes[voxel.Type].Color
-									color := []float32{float32(voxelColor.R) / 255.0, float32(voxelColor.G) / 255.0, float32(voxelColor.B) / 255.0, float32(voxelColor.A) / 255.0}
-									rl.SetShaderValue(game.shader, rl.GetShaderLocation(game.shader, "color"), color, rl.ShaderUniformVec4)
-
-									normal := rl.NewVector3(0, 0, -1) // Normal para a face correspondente
-								*/
-								//	Face culling
-								if shouldDrawFace(chunk, x, y, z, i) {
-									/*
-										// Calculates face displacement
-										offset := rl.NewVector3(pkg.FaceDirections[i].X*0.5, pkg.FaceDirections[i].Y*0.5, pkg.FaceDirections[i].Z*0.5)
-
-										// Calculates the new position of the face with the offset
-										facePosition := rl.NewVector3(voxelPosition.X+offset.X, voxelPosition.Y+offset.Y, voxelPosition.Z+offset.Z)
-
-										// Adjusts the scales of visible faces
-									*/
-									rl.DrawCube(voxelPosition, 1.0, 1.0, 1.0, world.BlockTypes[voxel.Type].Color)
-								}
-							}
-						}
+						/*
+							modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+							rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
+						*/
 					}
 				}
 			}
@@ -155,7 +212,7 @@ func RenderGame(game *load.Game) {
 	rl.EndMode3D()
 
 	// Apply light blue filter - for underwater
-	if game.Camera.Position.Y < float32(waterLevel) {
+	if game.Camera.Position.Y < float32(waterLevel)+0.5 {
 		rl.SetBlendMode(rl.BlendMode(0))
 		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
 	}
@@ -167,18 +224,4 @@ func RenderGame(game *load.Game) {
 	rl.DrawText(positionText, 10, 5, 20, rl.DarkGreen)
 
 	rl.EndDrawing()
-}
-
-func calculateLightIntensity(voxelPosition, lightPosition rl.Vector3) float32 {
-	distance := rl.Vector3Distance(voxelPosition, lightPosition)
-	return rl.Clamp(1.0/(distance*distance+1)*50, 0, 1) // Adjusted intensity scale
-}
-
-func applyLighting(color rl.Color, intensity float32) rl.Color {
-	return rl.NewColor(
-		uint8(float32(color.R)*intensity),
-		uint8(float32(color.G)*intensity),
-		uint8(float32(color.B)*intensity),
-		255,
-	)
 }
