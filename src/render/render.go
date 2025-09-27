@@ -24,9 +24,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				voxel := chunk.Voxels[x][y][z]
 				block := world.BlockTypes[voxel.Type]
 
-				if !block.IsVisible {
-					continue
-				} else if voxel.Type == "Water" || voxel.Type == "Plant" {
+				if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" {
 					continue
 				}
 
@@ -36,17 +34,17 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 					}
 
 					for i := 0; i < 4; i++ {
-						v := pkg.FaceVertices[face][i]
-						vertices = append(vertices,
-							float32(x)+v[0],
-							float32(y)+v[1],
-							float32(z)+v[2],
-						)
+                        v := pkg.FaceVertices[face][i]
+                        vertices = append(vertices,
+				            float32(x)+v[0],
+				            float32(y)+v[1],
+				            float32(z)+v[2],
+                        )
 
-						// Add color per vertex (RGBA)
-						c := block.Color
-						colors = append(colors, c.R, c.G, c.B, c.A)
-					}
+                        c := block.Color
+                        // Add color per vertex (RGBA)
+                        colors = append(colors, c.R, c.G, c.B, c.A)
+                    }
 
 					//	Add the two triangles of the face
 					indices = append(indices,
@@ -60,8 +58,10 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	}
 
 	mesh := rl.Mesh{
-		VertexCount:   int32(len(vertices) / 3),
-		TriangleCount: int32(len(indices) / 3),
+        VertexCount:   int32(len(vertices) / 3),
+        TriangleCount: int32(len(indices) / 3),
+        //https://www.raylib.com/examples/models/loader.html?name=models_mesh_generation
+        //Texcoords: make([]float32, mesh.vertexCount*2),
 	}
 
 	if len(vertices) > 0 {

@@ -1,6 +1,6 @@
 module go-engine
 
-go 1.23.4
+go 1.24.0
 
 require (
 	github.com/aquilax/go-perlin v1.1.0
@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/ebitengine/purego v0.8.4 // indirect
-	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	github.com/ebitengine/purego v0.9.0 // indirect
+	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
+	golang.org/x/sys v0.36.0 // indirect
 )

@@ -14,56 +14,66 @@ import (
 )
 
 type BlockProperties struct {
-	Color     rl.Color
-	IsSolid   bool
-	IsVisible bool
+    Texture   rl.Texture2D
+    Color     rl.Color
+    IsSolid   bool
+    IsVisible bool
 }
 
 var BlockTypes = map[string]BlockProperties{
 	"Grass": {
-		Color:     rl.NewColor(72, 174, 34, 255), // Green
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:     rl.LoadTexture("../assets/blocks/block.png"),
+        Color:       rl.NewColor(72, 174, 34, 255), // Green
+        IsSolid:     true,
+        IsVisible:   true,
 	},
 	"Dirt": {
-		Color:     rl.Brown,
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.Brown,
+        IsSolid:      true,
+        IsVisible:    true,
 	},
 	"Sand": {
-		Color:     rl.NewColor(236, 221, 178, 255), //	Beige
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.NewColor(236, 221, 178, 255), //	Beige
+        IsSolid:      true,
+        IsVisible:    true,
 	},
 	"Stone": {
-		Color:     rl.Gray,
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.Gray,
+        IsSolid:      true,
+        IsVisible:    true,
 	},
 	"Wood": {
-		Color:     rl.NewColor(126, 90, 57, 255), // Light brown
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.NewColor(126, 90, 57, 255), // Light brown
+        IsSolid:      true,
+        IsVisible:    true,
 	},
 	"Leaves": {
-		Color:     rl.NewColor(73, 129, 49, 255), // Dark green
-		IsSolid:   true,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.NewColor(73, 129, 49, 255), // Dark green
+        IsSolid:      true,
+        IsVisible:    true,
 	},
 	"Plant": {
-		Color:     rl.Red,
-		IsSolid:   false,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.Red,
+        IsSolid:      false,
+        IsVisible:    true,
 	},
 	"Water": {
-		Color:     rl.NewColor(0, 0, 255, 110), // Transparent blue
-		IsSolid:   false,
-		IsVisible: true,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.NewColor(0, 0, 255, 110), // Transparent blue
+        IsSolid:      false,
+        IsVisible:    true,
 	},
 	"Air": {
-		Color:     rl.NewColor(0, 0, 0, 0), // Transparent
-		IsSolid:   false,
-		IsVisible: false,
+        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
+        Color:        rl.NewColor(0, 0, 0, 0), // Transparent
+        IsSolid:      false,
+        IsVisible:    false,
 	},
 }
 
