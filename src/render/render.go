@@ -19,7 +19,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	indexOffset := uint16(0)
 
 	for x := 0; x < pkg.ChunkSize; x++ {
-		for y := 0; y < pkg.ChunkHeight; y++ {
+		for y := 0; y < int(pkg.ChunkHeight); y++ {
 			for z := 0; z < pkg.ChunkSize; z++ {
 				voxel := chunk.Voxels[x][y][z]
 				block := world.BlockTypes[voxel.Type]
@@ -44,6 +44,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
                         c := block.Color
                         // Add color per vertex (RGBA)
                         colors = append(colors, c.R, c.G, c.B, c.A)
+                        // texturecoords on common.go
                     }
 
 					//	Add the two triangles of the face
@@ -60,8 +61,6 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	mesh := rl.Mesh{
         VertexCount:   int32(len(vertices) / 3),
         TriangleCount: int32(len(indices) / 3),
-        //https://www.raylib.com/examples/models/loader.html?name=models_mesh_generation
-        //Texcoords: make([]float32, mesh.vertexCount*2),
 	}
 
 	if len(vertices) > 0 {
@@ -129,14 +128,14 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 	if renderTransparent {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
-	/*
-		view := rl.GetCameraMatrix(game.Camera)
-		projection := rl.GetCameraMatrix(game.Camera)
+	
+    view := rl.GetCameraMatrix(game.Camera)
+    projection := rl.GetCameraMatrix(game.Camera)
 
-		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
-		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
-		projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
-	*/
+    rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
+    rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
+    //projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
+	
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
 		// Build mesh only once if needed

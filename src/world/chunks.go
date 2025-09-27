@@ -45,9 +45,10 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 
 	playerChunkX := int(playerPosition.X) / pkg.ChunkSize
 	playerChunkZ := int(playerPosition.Z) / pkg.ChunkSize
+    chDist := int(pkg.ChunkDistance)
 
 	for position := range cc.Chunks {
-		if abs(int(position.X)/pkg.ChunkSize-playerChunkX) > pkg.ChunkDistance || abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > pkg.ChunkDistance {
+		if abs(int(position.X)/pkg.ChunkSize-playerChunkX) > chDist || abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > chDist {
 			delete(cc.Chunks, position)
 		}
 	}
@@ -59,8 +60,9 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 
 	var wg sync.WaitGroup
 	// Load chunks within the range
-	for x := playerChunkX - pkg.ChunkDistance; x <= playerChunkX+pkg.ChunkDistance; x++ {
-		for z := playerChunkZ - pkg.ChunkDistance; z <= playerChunkZ+pkg.ChunkDistance; z++ {
+    chDist := int(pkg.ChunkDistance);
+	for x := playerChunkX - chDist; x <= playerChunkX + chDist; x++ {
+		for z := playerChunkZ - chDist; z <= playerChunkZ+  chDist; z++ {
 			chunkPosition := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
 			if _, exists := chunkCache.Chunks[chunkPosition]; !exists {
 				wg.Add(1)
@@ -80,11 +82,11 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for chunkPos, chunk := range chunkCache.Chunks {
 		for i, direction := range pkg.FaceDirections {
 			neighborPos := rl.NewVector3(chunkPos.X+direction.X*float32(pkg.ChunkSize), chunkPos.Y, chunkPos.Z+direction.Z*float32(pkg.ChunkSize))
-			if neighbor, exists := chunkCache.Chunks[neighborPos]; exists {
-				chunk.Neighbors[i] = neighbor
-			} else {
-				chunk.Neighbors[i] = nil
-			}
+            if neighbor, exists := chunkCache.Chunks[neighborPos]; exists {
+                chunk.Neighbors[i] = neighbor
+                continue
+            }
+            chunk.Neighbors[i] = nil
 		}
 	}
 
@@ -94,8 +96,6 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 
 // Function to calculate the absolute value
 func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
+    mask := x >> 31
+    return (x + mask) ^ mask
 }

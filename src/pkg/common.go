@@ -7,9 +7,9 @@ import (
 var PlantModels [4]rl.Model
 
 const (
-	ChunkHeight        int     = 80
-	ChunkSize          int     = 32
-	ChunkDistance      int     = 1
+	ChunkHeight        int16   = 64
+	ChunkSize          int     = 16
+	ChunkDistance      int16   = 4
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 

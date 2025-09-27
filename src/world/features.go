@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+    "time"
 
 	"go-engine/src/pkg"
 
@@ -145,11 +146,11 @@ func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 	for range iterations {
 		newResult := ""
 		for _, char := range result {
-			if replacement, ok := rules[char]; ok {
-				newResult += replacement
-			} else {
-				newResult += string(char)
-			}
+            if replacement, ok := rules[char]; ok {
+                newResult += replacement
+                continue
+            }
+            newResult += string(char)
 		}
 		result = newResult
 	}
@@ -172,9 +173,9 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 		switch char {
 		case 'F': // Create wood blocks for tree tunks
 			//	Gurantee values are within bounds
-			if int(currentPos.X) >= 0 && int(currentPos.X) < pkg.ChunkSize &&
-				int(currentPos.Y) >= 0 && int(currentPos.Y) < pkg.ChunkHeight &&
-				int(currentPos.Z) >= 0 && int(currentPos.Z) < pkg.ChunkSize {
+			if int(currentPos.X) >= 0 && int(currentPos.X) < int(pkg.ChunkSize) &&
+				int(currentPos.Y) >= 0 && int(currentPos.Y) < int(pkg.ChunkHeight) &&
+				int(currentPos.Z) >= 0 && int(currentPos.Z) < int(pkg.ChunkSize) {
 				chunk.Voxels[int(currentPos.X)][int(currentPos.Y)][int(currentPos.Z)] = pkg.VoxelData{Type: "Wood"}
 			}
 			// Moving in the current direction
@@ -236,7 +237,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 							// Ensures that the blocks position is within bounds
 							if int(newPos.X) >= 0 && int(newPos.X) < pkg.ChunkSize &&
-								int(newPos.Y) >= 0 && int(newPos.Y) < pkg.ChunkHeight &&
+								int(newPos.Y) >= 0 && int(newPos.Y) < int(pkg.ChunkHeight) &&
 								int(newPos.Z) >= 0 && int(newPos.Z) < pkg.ChunkSize {
 								chunk.Voxels[int(newPos.X)][int(newPos.Y)][int(newPos.Z)] = pkg.VoxelData{Type: "Wood"}
 							}
@@ -263,7 +264,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 				}
 
 				if int(leafPos.X) >= 0 && int(leafPos.X) < pkg.ChunkSize &&
-					int(leafPos.Y) >= 0 && int(leafPos.Y) < pkg.ChunkHeight &&
+					int(leafPos.Y) >= 0 && int(leafPos.Y) < int(pkg.ChunkHeight) &&
 					int(leafPos.Z) >= 0 && int(leafPos.Z) < pkg.ChunkSize {
 
 					chunk.Voxels[int(leafPos.X)][int(leafPos.Y)][int(leafPos.Z)] = pkg.VoxelData{Type: "Leaves"}
@@ -309,7 +310,7 @@ func genWaterFormations(chunk *pkg.Chunk) {
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
 
 	// Creates a Perlin Noise generator
-	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
+	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {
