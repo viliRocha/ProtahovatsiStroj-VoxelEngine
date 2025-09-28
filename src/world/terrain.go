@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const perlinFrequency = 0.05
+const perlinFrequency = 0.04
 
 func chooseRandomTree() string {
 	model := rand.Intn(10)

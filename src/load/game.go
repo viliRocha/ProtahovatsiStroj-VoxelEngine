@@ -15,7 +15,7 @@ const (
 	ScreenWidth  int32 = 1000
 	ScreenHeight int32 = 650
 	//  Control of the intensity/amplitude of the noise
-	perlinAlpha = 6.0
+	perlinAlpha = 8.0
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
 	perlinBeta = 2.5
 	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.

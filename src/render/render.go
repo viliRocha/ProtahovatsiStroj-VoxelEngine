@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"unsafe"
+    "math/rand"
 
 	"go-engine/src/load"
 	"go-engine/src/pkg"
@@ -36,14 +37,16 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 					for i := 0; i < 4; i++ {
                         v := pkg.FaceVertices[face][i]
                         vertices = append(vertices,
-				            float32(x)+v[0],
-				            float32(y)+v[1],
-				            float32(z)+v[2],
+                            float32(x)+v[0],
+                            float32(y)+v[1],
+                            float32(z)+v[2],
                         )
 
                         c := block.Color
                         // Add color per vertex (RGBA)
-                        colors = append(colors, c.R, c.G, c.B, c.A)
+                        colorModifier := uint8(rand.Intn(16))
+
+                        colors = append(colors, c.R, c.G + colorModifier, c.B, c.A)
                         // texturecoords on common.go
                     }
 
