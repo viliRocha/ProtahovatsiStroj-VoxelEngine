@@ -14,6 +14,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// see https://github.com/adct-the-experimenter/Raylib_VoxelEngine/blob/main/blockfacehelper.c for inspiration
 type BlockProperties struct {
     Texture   rl.Texture2D
     Color     rl.Color

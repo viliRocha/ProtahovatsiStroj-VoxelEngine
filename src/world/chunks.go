@@ -6,7 +6,7 @@ import (
 	"go-engine/src/pkg"
 
 	"github.com/aquilax/go-perlin"
-	rl "github.com/gen2brain/raylib-go/raylib"
+    rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type ChunkCache struct {

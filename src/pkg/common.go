@@ -9,7 +9,7 @@ var PlantModels [4]rl.Model
 const (
 	ChunkHeight        int16   = 64
 	ChunkSize          int     = 16
-	ChunkDistance      int16   = 4
+	ChunkDistance      int16   = 8
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 
@@ -25,6 +25,7 @@ type PlantData struct {
 }
 
 type Chunk struct {
+    //Materials rl.Material
 	Voxels    [ChunkSize][ChunkHeight][ChunkSize]VoxelData
 	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
 	Plants    []PlantData

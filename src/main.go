@@ -36,6 +36,8 @@ func main() {
 		//  Draw
 		render.RenderGame(&game)
 	}
+    //rl.UnloadShader(shader)
+    //rl.UnloadModel(cube)
 
 	// After the loop ends:
 	defer rl.CloseWindow()

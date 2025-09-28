@@ -31,17 +31,30 @@ type Game struct {
 	LightPosition    rl.Vector3
 }
 
-func loadShader() rl.Shader {
+func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
 	shader := rl.LoadShader("shaders/shading.vs", "shaders/shading.fs")
+    *shader.Locs = rl.GetShaderLocation(shader, "viewPos")
+    
+    ambientLoc := rl.GetShaderLocation(shader, "ambient")
+	shaderValue := []float32{0.1, 0.1, 0.1, 1.0}
+	rl.SetShaderValue(shader, ambientLoc, shaderValue, rl.ShaderUniformVec4)
 
-	lightDir := rl.NewVector3(0.0, -1.0, 1.0) // Luz vindo de cima e da diagonal
-	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, "lightDir"), []float32{lightDir.X, lightDir.Y, lightDir.Z}, rl.ShaderUniformVec3)
+    cameraPos := []float32{camera.Position.X, camera.Position.Y, camera.Position.Z}
+    rl.SetShaderValue(shader, *shader.Locs, cameraPos, rl.ShaderUniformVec3)
+    
+    //chunkCache.Chunks.Materials.Shader = shader
+
+	lights := make([]Light, 4)
+	lights[0] = NewLight(LightTypePoint, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, shader)
+    
+    rl.SetShaderValue(shader, *shader.Locs, cameraPos, rl.ShaderUniformVec3)
 
 	return shader
 }
 
 func InitGame() Game {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
+    rl.SetConfigFlags(rl.FlagMsaa4xHint)
 	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Voxel Game")
 
 	camera := rl.Camera{
@@ -63,10 +76,11 @@ func InitGame() Game {
 	}
 
 	LightPosition := rl.NewVector3(0, 6, 0)
-	shader := loadShader()
 
-	chunkCache := world.NewChunkCache()                                                                                    // Initialize ChunkCache
-	chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
+    chunkCache := world.NewChunkCache()    // Initialize ChunkCache
+    shader := loadShader(camera, chunkCache)
+
+    chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
 
 	rl.SetTargetFPS(60)
 
