@@ -25,40 +25,38 @@ func chooseRandomTree() string {
 
 func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants bool) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
-
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	for x := range pkg.ChunkSize {
-		for z := range pkg.ChunkSize {
+        axis:
+        for z := range pkg.ChunkSize {
 			// Use Perlin noise to generate the height of the terrain
 			height := calculateHeight(position, p, x, z)
 
 			for y := range pkg.ChunkSize {
-				isSolid := y <= height
+                //	Grass shouldn't generate under water nor bellow other blocks
+                if y == height && y > waterLevel {
+                    chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
+                }
 
-				if isSolid {
+                if y < waterLevel {
                     chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
+                }
 
-                    //	Grass shouldn't generate under water
-                    if y == height && y > waterLevel {
-						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
-                    } else if y <= height-5 {
-                        chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
-                    }
-                    continue
-				}
-				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+                if y >= height {
+                    continue axis
+                }
+
+                chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
 			}
 		}
 	}
-	//fmt.Println(len(chunk.Plants))
+    // Add water to specific layerw
+	genWaterFormations(chunk)
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
 	generateTrees(chunk, chooseRandomTree())
-
-	// Add water to specific layer
-	genWaterFormations(chunk)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true

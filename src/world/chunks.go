@@ -48,7 +48,7 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
     chDist := int(pkg.ChunkDistance)
 
 	for position := range cc.Chunks {
-		if abs(int(position.X)/pkg.ChunkSize-playerChunkX) > chDist || abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > chDist {
+		if Abs(int(position.X)/pkg.ChunkSize-playerChunkX) > chDist || Abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > chDist {
 			delete(cc.Chunks, position)
 		}
 	}
@@ -95,7 +95,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 }
 
 // Function to calculate the absolute value
-func abs(x int) int {
+func Abs(x int) int {
     mask := x >> 31
     return (x + mask) ^ mask
 }

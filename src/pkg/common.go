@@ -9,8 +9,17 @@ var PlantModels [4]rl.Model
 const (
 	ChunkHeight        int16   = 64
 	ChunkSize          int     = 16
-	ChunkDistance      int16   = 8
+	ChunkDistance      int16   = 4
 	WaterLevelFraction float64 = 0.375 // 3/8
+
+	ScreenWidth  int32 = 1000
+	ScreenHeight int32 = 650
+	//  Control of the intensity/amplitude of the noise
+	PerlinAlpha = 18.0
+	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
+	PerlinBeta = 2.5
+	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
+	PerlinN = int32(2)
 )
 
 type VoxelData struct {
@@ -26,9 +35,9 @@ type PlantData struct {
 
 type Chunk struct {
     //Materials rl.Material
-	Voxels    [ChunkSize][ChunkHeight][ChunkSize]VoxelData
-	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
-	Plants    []PlantData
+    Voxels    [ChunkSize][ChunkHeight][ChunkSize]VoxelData
+    Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
+    Plants    []PlantData
 
 	Mesh       rl.Mesh
 	Model      rl.Model
@@ -131,4 +140,14 @@ func GetFaceGeometry(faceIndex int, x, y, z float32) ([]rl.Vector3, []rl.Vector3
 	}
 
 	return vertices, normals, texcoords
+}
+
+func Clamp(v, min, max int) int {
+    if v < min {
+        return min
+    }
+    if v > max {
+        return max
+    }
+    return v
 }

@@ -12,6 +12,12 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+type Coords struct {
+    x int
+    y int
+    z int
+}
+
 func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	var vertices []float32
 	var indices []uint16
@@ -30,7 +36,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				}
 
 				for face := 0; face < 6; face++ {
-					if !shouldDrawFace(chunk, x, y, z, face) {
+					if !shouldDrawFace(chunk, Coords{x, y, z}, face) {
 						continue
 					}
 
@@ -44,10 +50,9 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 
                         c := block.Color
                         // Add color per vertex (RGBA)
-                        colorModifier := uint8(rand.Intn(16))
+                        colorModifier := uint8(rand.Intn(16))//uint8(y * 20)
 
-                        colors = append(colors, c.R, c.G + colorModifier, c.B, c.A)
-                        // texturecoords on common.go
+                        colors = append(colors, c.R + colorModifier, c.G + colorModifier, c.B + colorModifier, c.A)
                     }
 
 					//	Add the two triangles of the face
@@ -91,44 +96,47 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	chunk.IsOutdated = false
 }
 
-func shouldDrawFace(chunk *pkg.Chunk, x, y, z, faceIndex int) bool {
+func shouldDrawFace(chunk *pkg.Chunk, pos Coords, faceIndex int) bool {
 	direction := pkg.FaceDirections[faceIndex]
 
-	//  Calculates the new coordinates based on the face direction
-	newX, newY, newZ := x+int(direction.X), y+int(direction.Y), z+int(direction.Z)
+    // Calculates the new coordinates based on the face direction
+    pos.x = int(pos.x+int(direction.X))
+    pos.y = int(pos.y+int(direction.Y))
+    pos.z = int(pos.z+int(direction.Z))
+    
+    // normalize the value of the coords to be within the range of 0-15
+    x, y, z := pkg.Clamp(pos.x, 0, 15), pkg.Clamp(pos.y, 0, 15), pkg.Clamp(pos.z, 0, 15)
 
 	// Checks if the new coordinates are within the chunk bounds
-	if newX >= 0 && newX < pkg.ChunkSize && newY >= 0 && newY < pkg.ChunkSize && newZ >= 0 && newZ < pkg.ChunkSize {
-		// Returns true if the neighboring voxel is not solid
-		return !world.BlockTypes[chunk.Voxels[newX][newY][newZ].Type].IsSolid
+	if x == pos.x && y == pos.y && z == pos.z {
+        voxel_type := chunk.Voxels[x][y][z].Type
+        return !world.BlockTypes[voxel_type].IsSolid
 	}
 
-	if chunk.Neighbors[faceIndex] == nil {
+    neighbor_index := chunk.Neighbors[faceIndex]
+
+	if neighbor_index == nil {
 		return false
 	}
-
-	// Checks if a neighboring voxel exists and returns true if the face should be drawn
-	switch faceIndex {
+    
+    switch faceIndex {
 	case 0: // Right (X+)
-		newX = 0
+		x = 0
 	case 1: // Left (X-)
-		newX = pkg.ChunkSize - 1
+		x = pkg.ChunkSize - 1
 	case 2: // Top (Y+)
-		newY = 0
 	case 3: // Bottom (Y-)
-		//	No need to render the chunks bottom
-		return false
 	case 4: // Front (Z+)
-		newZ = 0
+		z = 0
 	case 5: // Back (Z-)
-		newZ = pkg.ChunkSize - 1
+		z = pkg.ChunkSize - 1
 	}
 
-	return !world.BlockTypes[chunk.Neighbors[faceIndex].Voxels[newX][newY][newZ].Type].IsSolid
+	return !world.BlockTypes[neighbor_index.Voxels[x][y][z].Type].IsSolid
 }
 
-func RenderVoxels(game *load.Game, renderTransparent bool) {
-	if renderTransparent {
+func RenderVoxels(game *load.Game, is_transparent bool) {
+	if is_transparent {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
 	
@@ -141,10 +149,10 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 	
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
-		// Build mesh only once if needed
-		if chunk.IsOutdated {
-			BuildChunkMesh(chunk, chunkPosition)
-		}
+        // Build mesh only once if needed
+        if chunk.IsOutdated {
+            BuildChunkMesh(chunk, chunkPosition)
+        }
 
 		// If the chunk has mesh, draw directly
 		if chunk.HasMesh && chunk.Model.MeshCount > 0 && chunk.Model.Meshes != nil {
@@ -154,12 +162,12 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 		for x := range pkg.ChunkSize {
 			for y := range pkg.ChunkHeight {
 				for z := range pkg.ChunkSize {
-					voxel := chunk.Voxels[x][y][z]
-					block := world.BlockTypes[voxel.Type]
+                    voxel := chunk.Voxels[x][y][z]
+                    block := world.BlockTypes[voxel.Type]
 
-					if !block.IsVisible || (block.Color.A < 255) != renderTransparent {
-						continue
-					}
+                    if !block.IsVisible || (block.Color.A < 255) != is_transparent {
+                        continue
+                    }
 
 					voxelPosition := rl.NewVector3(
 						chunkPosition.X+float32(x),
@@ -189,7 +197,7 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 	}
 
 	//	Disable blending after yielding water
-	if renderTransparent {
+	if is_transparent {
 		rl.SetBlendMode(rl.BlendMode(0))
 	}
 }

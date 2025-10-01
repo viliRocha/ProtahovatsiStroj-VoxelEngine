@@ -11,17 +11,6 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const (
-	ScreenWidth  int32 = 1000
-	ScreenHeight int32 = 650
-	//  Control of the intensity/amplitude of the noise
-	perlinAlpha = 8.0
-	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
-	perlinBeta = 2.5
-	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
-	perlinN = int32(2)
-)
-
 type Game struct {
 	Camera           rl.Camera
 	CameraMode       rl.CameraMode
@@ -55,7 +44,7 @@ func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
 func InitGame() Game {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
     rl.SetConfigFlags(rl.FlagMsaa4xHint)
-	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Voxel Game")
+	rl.InitWindow(pkg.ScreenWidth, pkg.ScreenHeight, "Protahovatsi Stroj - Voxel Game")
 
 	camera := rl.Camera{
 		Position:   rl.NewVector3(2.79, 19.45, 10.0),
@@ -68,7 +57,7 @@ func InitGame() Game {
 
 	// Initializes Perlin noise
 	seed := rand.Int63()
-	perlinNoise := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed)
+	perlinNoise := perlin.NewPerlin(pkg.PerlinAlpha, pkg.PerlinBeta, pkg.PerlinN, seed)
 
 	//	Load .vox models
 	for i := range 4 {

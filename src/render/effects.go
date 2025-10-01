@@ -23,6 +23,7 @@ func calculateAmbientOcclusion(chunk *pkg.Chunk, x, y, z int) float32 {
 		occlusionValue = 0
 	}
 	return occlusionValue
+    //return 0.0
 }
 
 // Make sure that the position is valid in the chunk
