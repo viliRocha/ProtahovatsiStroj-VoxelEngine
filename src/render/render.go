@@ -97,7 +97,8 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 }
 
 func shouldDrawFace(chunk *pkg.Chunk, pos Coords, faceIndex int) bool {
-	direction := pkg.FaceDirections[faceIndex]
+	direction, max_size, max_height :=
+        pkg.FaceDirections[faceIndex], int(pkg.ChunkSize - 1), int(pkg.ChunkHeight) - 1
 
     // Calculates the new coordinates based on the face direction
     pos.x = int(pos.x+int(direction.X))
@@ -105,7 +106,7 @@ func shouldDrawFace(chunk *pkg.Chunk, pos Coords, faceIndex int) bool {
     pos.z = int(pos.z+int(direction.Z))
     
     // normalize the value of the coords to be within the range of 0-15
-    x, y, z := pkg.Clamp(pos.x, 0, 15), pkg.Clamp(pos.y, 0, 15), pkg.Clamp(pos.z, 0, 15)
+    x, y, z := pkg.Clamp(pos.x, 0, max_size), pkg.Clamp(pos.y, 0, max_height), pkg.Clamp(pos.z, 0, max_size)
 
 	// Checks if the new coordinates are within the chunk bounds
 	if x == pos.x && y == pos.y && z == pos.z {
@@ -121,15 +122,17 @@ func shouldDrawFace(chunk *pkg.Chunk, pos Coords, faceIndex int) bool {
     
     switch faceIndex {
 	case 0: // Right (X+)
-		x = 0
+        x = 0
 	case 1: // Left (X-)
-		x = pkg.ChunkSize - 1
+        x = max_size
 	case 2: // Top (Y+)
+        x = max_height
 	case 3: // Bottom (Y-)
+        return false
 	case 4: // Front (Z+)
-		z = 0
+        z = 0
 	case 5: // Back (Z-)
-		z = pkg.ChunkSize - 1
+        z = max_size
 	}
 
 	return !world.BlockTypes[neighbor_index.Voxels[x][y][z].Type].IsSolid

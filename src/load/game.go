@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 
-	"go-engine/src/pkg"
-	"go-engine/src/world"
+    "go-engine/src/pkg"
+    "go-engine/src/world"
 
-	"github.com/aquilax/go-perlin"
-	rl "github.com/gen2brain/raylib-go/raylib"
+    "github.com/aquilax/go-perlin"
+    rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type Game struct {
@@ -30,8 +30,6 @@ func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
 
     cameraPos := []float32{camera.Position.X, camera.Position.Y, camera.Position.Z}
     rl.SetShaderValue(shader, *shader.Locs, cameraPos, rl.ShaderUniformVec3)
-    
-    //chunkCache.Chunks.Materials.Shader = shader
 
 	lights := make([]Light, 4)
 	lights[0] = NewLight(LightTypePoint, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, shader)
@@ -42,29 +40,29 @@ func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
 }
 
 func InitGame() Game {
-	rl.SetConfigFlags(rl.FlagWindowResizable)
+    rl.SetConfigFlags(rl.FlagWindowResizable)
     rl.SetConfigFlags(rl.FlagMsaa4xHint)
-	rl.InitWindow(pkg.ScreenWidth, pkg.ScreenHeight, "Protahovatsi Stroj - Voxel Game")
+    rl.InitWindow(pkg.ScreenWidth, pkg.ScreenHeight, "Protahovatsi Stroj - Voxel Game")
 
-	camera := rl.Camera{
-		Position:   rl.NewVector3(2.79, 19.45, 10.0),
-		Target:     rl.NewVector3(0.0, 0.0, 0.0),
-		Up:         rl.NewVector3(0.0, 1.0, 0.0),
-		Fovy:       45.0,
-		Projection: rl.CameraPerspective,
-	}
-	cameraMode := rl.CameraFirstPerson
+    camera := rl.Camera{
+        Position:   rl.NewVector3(2.79, 19.45, 10.0),
+        Target:     rl.NewVector3(0.0, 0.0, 0.0),
+        Up:         rl.NewVector3(0.0, 1.0, 0.0),
+        Fovy:       45.0,
+        Projection: rl.CameraPerspective,
+    }
+    cameraMode := rl.CameraFirstPerson
 
-	// Initializes Perlin noise
-	seed := rand.Int63()
-	perlinNoise := perlin.NewPerlin(pkg.PerlinAlpha, pkg.PerlinBeta, pkg.PerlinN, seed)
+    // Initializes Perlin noise
+    seed := rand.Int63()
+    perlinNoise := perlin.NewPerlin(pkg.PerlinAlpha, pkg.PerlinBeta, pkg.PerlinN, seed)
 
-	//	Load .vox models
-	for i := range 4 {
-		pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("assets/plants/plant_%d.vox", i))
-	}
+    // Load .vox models
+    for i := range 4 {
+        pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("assets/plants/plant_%d.vox", i))
+    }
 
-	LightPosition := rl.NewVector3(0, 6, 0)
+    LightPosition := rl.NewVector3(0, 6, 0)
 
     chunkCache := world.NewChunkCache()    // Initialize ChunkCache
     shader := loadShader(camera, chunkCache)
@@ -73,12 +71,12 @@ func InitGame() Game {
 
 	rl.SetTargetFPS(60)
 
-	return Game{
-		Camera:          camera,
-		CameraMode:      cameraMode,
-		ChunkCache:      chunkCache,
-		PerlinNoise:     perlinNoise,
-		Shader:          shader,
-		LightPosition:   LightPosition,
+    return Game{
+        Camera:          camera,
+        CameraMode:      cameraMode,
+        ChunkCache:      chunkCache,
+        PerlinNoise:     perlinNoise,
+        Shader:          shader,
+        LightPosition:   LightPosition,
 	}
 }
