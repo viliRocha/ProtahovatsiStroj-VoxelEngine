@@ -24,46 +24,56 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	var colors []uint8
 
 	indexOffset := uint16(0)
+    
+    /* Multidimensional Arrays Linearization, docs and extras that may come in handy
+     * https://ic.unicamp.br/~bit/mc102/aulas/aula15.pdf (introdução)
+     * https://felippe.ubi.pt/texts3/contr_av_ppt01p.pdf (pág. 13)
+     * https://www.aussieai.com/book/ch36-linearized-multidimensional-arrays
+     * https://teotl.dev/vischunk/ (may be useful)
+     * (AI was used to help the interpretation of some of those docs)
+     */
+    Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
+    for i := 0; i < Nx*Ny*Nz; i++ {
+        pos := Coords{
+            x: i / (Ny * Nz),
+            y: (i / Nz) % Ny,
+            z: i % Nz,
+        }
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for y := 0; y < int(pkg.ChunkHeight); y++ {
-			for z := 0; z < pkg.ChunkSize; z++ {
-				voxel := chunk.Voxels[x][y][z]
-				block := world.BlockTypes[voxel.Type]
+        voxel := chunk.Voxels[pos.x][pos.y][pos.z]
+        block := world.BlockTypes[voxel.Type]
 
-				if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" {
-					continue
-				}
+        if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" {
+            continue
+        }
 
-				for face := 0; face < 6; face++ {
-					if !shouldDrawFace(chunk, Coords{x, y, z}, face) {
-						continue
-					}
+        for face := 0; face < 6; face++ {
+            if !shouldDrawFace(chunk, pos, face) {
+                continue
+            }
 
-					for i := 0; i < 4; i++ {
-                        v := pkg.FaceVertices[face][i]
-                        vertices = append(vertices,
-                            float32(x)+v[0],
-                            float32(y)+v[1],
-                            float32(z)+v[2],
-                        )
+            for i := 0; i < 4; i++ {
+                v := pkg.FaceVertices[face][i]
+                vertices = append(vertices,
+                    float32(pos.x)+v[0],
+                    float32(pos.y)+v[1],
+                    float32(pos.z)+v[2],
+                )
 
-                        c := block.Color
-                        // Add color per vertex (RGBA)
-                        colorModifier := uint8(rand.Intn(16))//uint8(y * 20)
+                c := block.Color
+                // Add color per vertex (RGBA)
+                colorModifier := uint8(rand.Intn(16))//uint8(y * 20)
 
-                        colors = append(colors, c.R + colorModifier, c.G + colorModifier, c.B + colorModifier, c.A)
-                    }
+                colors = append(colors, c.R + colorModifier, c.G + colorModifier, c.B + colorModifier, c.A)
+            }
 
-					//	Add the two triangles of the face
-					indices = append(indices,
-						indexOffset, indexOffset+1, indexOffset+2,
-						indexOffset, indexOffset+2, indexOffset+3,
-					)
-					indexOffset += 4
-				}
-			}
-		}
+            //	Add the two triangles of the face
+            indices = append(indices,
+                indexOffset, indexOffset+1, indexOffset+2,
+                indexOffset, indexOffset+2, indexOffset+3,
+            )
+            indexOffset += 4
+        }
 	}
 
 	mesh := rl.Mesh{

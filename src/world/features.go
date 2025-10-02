@@ -316,32 +316,33 @@ func genWaterFormations(chunk *pkg.Chunk) {
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {
-			//	Water shouldn't replace solid blocks (go through them)
-			if chunk.Voxels[x][waterLevel][z].Type == "Air" {
-                chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
+            //	Water shouldn't replace solid blocks (go through them)
+            if chunk.Voxels[x][waterLevel][z].Type != "Air" {
+                continue
+            }
+            chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
 
-                for y := range pkg.ChunkSize {
-                    // Checks adjacent blocks for generating sand
-                    for dy := -3; dy <= 1; dy++ {
-                        for dx := -3; dx <= 3; dx++ {
-                            adjX := x + dx
-                            adjZ := z + dy
+            for y := range pkg.ChunkSize {
+                // Checks adjacent blocks for generating sand
+                for dy := -3; dy <= 1; dy++ {
+                    for dx := -3; dx <= 3; dx++ {
+                        adjX := x + dx
+                        adjZ := z + dy
 
-                            //	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
-                            if adjX >= 0 && adjX < pkg.ChunkSize && adjZ >= 0 && adjZ < pkg.ChunkSize {
-                                // Generate a Perlin Noise value
-                                noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
-                                voxel := chunk.Voxels[adjX][y][adjZ].Type
+                        //	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
+                        if adjX >= 0 && adjX < pkg.ChunkSize && adjZ >= 0 && adjZ < pkg.ChunkSize {
+                            // Generate a Perlin Noise value
+                            noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
+                            voxel := chunk.Voxels[adjX][y][adjZ].Type
 
-                                // Replaces dirt and grass with sand
-                                if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
-                                    chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
-                                }
+                            // Replaces dirt and grass with sand
+                            if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
+                                chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
                             }
-						}
-					}
+                        }
+				    }
 				}
-			}
+            }
 		}
 	}
 }
