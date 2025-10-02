@@ -107,23 +107,22 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 
 			// Iterate from the top to the bottom of the chunk to find the surface
 			for y := pkg.ChunkSize - 1; y >= 0; y-- {
-				if BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid {
-					// Ensure plants are only placed above layer 13 (water)
-					if y < pkg.ChunkSize && y > waterLevel {
-						//  Randomly define a model for the plant
-						randomModel := rand.Intn(4) // 0 - 3
-						chunk.Voxels[x][y+1][z] = pkg.VoxelData{
-							Type:  "Plant",
-							Model: pkg.PlantModels[randomModel],
-						}
-						plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
-						chunk.Plants = append(chunk.Plants, pkg.PlantData{
-							Position: plantPos,
-							ModelID:  randomModel,
-						})
-					}
-					break
-				}
+                // Ensure plants are only placed above layer 13 (water)
+                if !BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid || y > pkg.ChunkSize && y < waterLevel {
+                    break
+                }
+                // Randomly define a model for the plant
+                randomModel := rand.Intn(4) // 0 - 3
+                chunk.Voxels[x][y+1][z] = pkg.VoxelData{
+                    Type:  "Plant",
+                    Model: pkg.PlantModels[randomModel],
+                }
+                plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
+                chunk.Plants = append(chunk.Plants, pkg.PlantData{
+                    Position: plantPos,
+                    ModelID:  randomModel,
+                })
+                break
 			}
 		}
 	}
@@ -279,11 +278,8 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
-
 	rules := parseLSystemRule(lsystemRule)
-
 	treeStructure := applyLSystem("F", rules, 2)
-
 	treeCount := rand.Intn(pkg.ChunkSize / 8)
 
 	for range treeCount {
@@ -299,12 +295,13 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 		}
 
 		// Make sure the surface is valid and not in the water
-		if surfaceY > waterLevel {
-            treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
-
-            // Build the tree with the generated structure
-            placeTree(chunk, treePos, treeStructure)
+		if surfaceY < waterLevel {
+            continue
 		}
+        treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
+
+        // Build the tree with the generated structure
+        placeTree(chunk, treePos, treeStructure)
 	}
 }
 
@@ -330,15 +327,16 @@ func genWaterFormations(chunk *pkg.Chunk) {
                         adjZ := z + dy
 
                         //	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
-                        if adjX >= 0 && adjX < pkg.ChunkSize && adjZ >= 0 && adjZ < pkg.ChunkSize {
-                            // Generate a Perlin Noise value
-                            noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
-                            voxel := chunk.Voxels[adjX][y][adjZ].Type
+                        if adjX <= 0 && adjX > pkg.ChunkSize && adjZ <= 0 && adjZ > pkg.ChunkSize {
+                            continue
+                        }
+                        // Generate a Perlin Noise value
+                        noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
+                        voxel := chunk.Voxels[adjX][y][adjZ].Type
 
-                            // Replaces dirt and grass with sand
-                            if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
-                                chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
-                            }
+                        // Replaces dirt and grass with sand
+                        if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
+                            chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
                         }
 				    }
 				}

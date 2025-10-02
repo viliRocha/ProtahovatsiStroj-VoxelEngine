@@ -159,7 +159,6 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
     rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
     rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
     //projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
-	
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
         // Build mesh only once if needed
@@ -172,40 +171,42 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 			rl.DrawModel(chunk.Model, chunkPosition, 1.0, rl.White)
 		}
 
-		for x := range pkg.ChunkSize {
-			for y := range pkg.ChunkHeight {
-				for z := range pkg.ChunkSize {
-                    voxel := chunk.Voxels[x][y][z]
-                    block := world.BlockTypes[voxel.Type]
+        Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
+        for i := 0; i < Nx*Ny*Nz; i++ {
+            pos := Coords{
+                x: i / (Ny * Nz),
+                y: (i / Nz) % Ny,
+                z: i % Nz,
+            }
 
-                    if !block.IsVisible || (block.Color.A < 255) != is_transparent {
-                        continue
-                    }
+            voxel := chunk.Voxels[pos.x][pos.y][pos.z]
+            block := world.BlockTypes[voxel.Type]
 
-					voxelPosition := rl.NewVector3(
-						chunkPosition.X+float32(x),
-						chunkPosition.Y+float32(y),
-						chunkPosition.Z+float32(z),
-					)
+            if !block.IsVisible || (block.Color.A < 255) != is_transparent {
+                continue
+            }
 
-					switch voxel.Type {
-					case "Plant":
-						rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+            voxelPosition := rl.NewVector3(
+                chunkPosition.X+float32(pos.x),
+                chunkPosition.Y+float32(pos.y),
+                chunkPosition.Z+float32(pos.z),
+            )
 
-					case "Water":
-						voxelPosition.X += 0.5
-						voxelPosition.Y += 0.5
-						voxelPosition.Z += 0.5
+            switch voxel.Type {
+                case "Plant":
+                    rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+                case "Water":
+                    voxelPosition.X += 0.5
+                    voxelPosition.Y += 0.5
+                    voxelPosition.Z += 0.5
 
-						rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
+                    rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
 
-						/*
-							modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
-							rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
-						*/
-					}
-				}
-			}
+                    /*
+                    modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+                    rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
+                    */
+            }
 		}
 	}
 
