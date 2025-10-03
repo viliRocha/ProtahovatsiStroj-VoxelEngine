@@ -23,8 +23,8 @@ const (
 )
 
 type VoxelData struct {
-	Type  string
-	Model rl.Model
+    Type  string
+    Model rl.Model
 }
 
 // Stores plant positions
@@ -148,12 +148,12 @@ func GetFaceGeometry(faceIndex int, x, y, z float32) ([]rl.Vector3, []rl.Vector3
 	return vertices, normals, texcoords
 }
 
-func Clamp(v, min, max int) int {
-    if v < min {
-        return min
+func Transform(val, min, max int) (int, bool) {
+    if val < min {
+        return max, false
     }
-    if v > max {
-        return max
+    if val > max {
+        return min, false
     }
-    return v
+    return val, true
 }

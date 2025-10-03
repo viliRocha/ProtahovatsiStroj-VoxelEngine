@@ -305,13 +305,13 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 }
 
 func genWaterFormations(chunk *pkg.Chunk) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+    waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
 
-	// Creates a Perlin Noise generator
-	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
+    // Creates a Perlin Noise generator
+    perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
 
-	for x := range pkg.ChunkSize {
-		for z := range pkg.ChunkSize {
+    for x := range pkg.ChunkSize {
+        for z := range pkg.ChunkSize {
             //	Water shouldn't replace solid blocks (go through them)
             if chunk.Voxels[x][waterLevel][z].Type != "Air" {
                 continue

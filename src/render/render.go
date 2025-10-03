@@ -103,18 +103,19 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 	direction, max_size, max_height :=
         pkg.FaceDirections[faceIndex], int(pkg.ChunkSize - 1), int(pkg.ChunkHeight) - 1
+    
+    var vX bool
+    var vY bool
+    var vZ bool
 
     // Calculates the new coordinates based on the face direction
-    pos.X = int(pos.X+int(direction.X))
-    pos.Y = int(pos.Y+int(direction.Y))
-    pos.Z = int(pos.Z+int(direction.Z))
-    
-    // normalize the value of the coords to be within the range of 0-15
-    x, y, z := pkg.Clamp(pos.X, 0, max_size), pkg.Clamp(pos.Y, 0, max_height), pkg.Clamp(pos.Z, 0, max_size)
+    pos.X, vX = pkg.Transform(int(pos.X+int(direction.X)), 0, max_size)
+    pos.Y, vY = pkg.Transform(int(pos.Y+int(direction.Y)), 0, max_height)
+    pos.Z, vZ = pkg.Transform(int(pos.Z+int(direction.Z)), 0, max_size)
 
 	// Checks if the new coordinates are within the chunk bounds
-	if x == pos.X && y == pos.Y && z == pos.Z {
-        voxel_type := chunk.Voxels[x][y][z].Type
+	if vX && vY && vZ {
+        voxel_type := chunk.Voxels[pos.X][pos.Y][pos.Z].Type
         return !world.BlockTypes[voxel_type].IsSolid
 	}
 
@@ -123,29 +124,14 @@ func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 	if neighbor_index == nil {
 		return false
 	}
-    
-    switch faceIndex {
-	case 0: // Right (X+)
-        x = 0
-	case 1: // Left (X-)
-        x = max_size
-	case 2: // Top (Y+)
-        x = max_height
-	case 3: // Bottom (Y-)
-        return false
-	case 4: // Front (Z+)
-        z = 0
-	case 5: // Back (Z-)
-        z = max_size
-	}
 
-	return !world.BlockTypes[neighbor_index.Voxels[x][y][z].Type].IsSolid
+	return !world.BlockTypes[neighbor_index.Voxels[pos.X][pos.Y][pos.Z].Type].IsSolid
 }
 
 func RenderVoxels(game *load.Game, is_transparent bool) {
-	if is_transparent {
-		rl.SetBlendMode(rl.BlendAlpha)
-	}
+    if is_transparent {
+        rl.SetBlendMode(rl.BlendAlpha)
+    }
 	
     view := rl.GetCameraMatrix(game.Camera)
     projection := rl.GetCameraMatrix(game.Camera)

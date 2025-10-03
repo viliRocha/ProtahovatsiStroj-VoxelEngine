@@ -42,6 +42,10 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
                 if y < waterLevel {
                     chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
                 }
+                
+                if y == waterLevel {
+                    chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Sand"}
+                }
 
                 if y >= height {
                     continue axis
@@ -51,17 +55,17 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 			}
 		}
 	}
-    // Add water to specific layerw
-	genWaterFormations(chunk)
+    // Add water to specific layer
+    genWaterFormations(chunk)
 
-	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, reusePlants)
-	generateTrees(chunk, chooseRandomTree())
+    //  Generate the plants after the terrain generation
+    generatePlants(chunk, position, reusePlants)
+    generateTrees(chunk, chooseRandomTree())
 
-	// Marks the chunk as outdated so that the mesh can be generated
-	chunk.IsOutdated = true
+    // Marks the chunk as outdated so that the mesh can be generated
+    chunk.IsOutdated = true
 
-	return chunk
+    return chunk
 }
 
 func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
