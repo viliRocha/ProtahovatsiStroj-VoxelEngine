@@ -32,11 +32,11 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 		updatedChunk.IsOutdated = true
 		cc.Chunks[position] = updatedChunk
 		return updatedChunk
-	} else {
-		chunk := GenerateAbovegroundChunk(position, p, false)
-		cc.Chunks[position] = chunk
-		return chunk
 	}
+
+    chunk := GenerateAbovegroundChunk(position, p, false)
+    cc.Chunks[position] = chunk
+    return chunk
 }
 
 func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
@@ -64,16 +64,17 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for x := playerChunkX - chDist; x <= playerChunkX + chDist; x++ {
 		for z := playerChunkZ - chDist; z <= playerChunkZ+  chDist; z++ {
 			chunkPosition := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
-			if _, exists := chunkCache.Chunks[chunkPosition]; !exists {
-				wg.Add(1)
-				//fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
-				go func(cp rl.Vector3) {
-					defer wg.Done()
-					//fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-					chunkCache.GetChunk(cp, p)
-					//fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-				}(chunkPosition)
+			if _, exists := chunkCache.Chunks[chunkPosition]; exists {
+				continue
 			}
+            wg.Add(1)
+            //fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
+            go func(cp rl.Vector3) {
+                defer wg.Done()
+                //fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
+                chunkCache.GetChunk(cp, p)
+                //fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
+            }(chunkPosition)
 		}
 	}
 	wg.Wait()
@@ -95,6 +96,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 }
 
 // Function to calculate the absolute value
+// https://stackoverflow.com/questions/664852/which-is-the-fastest-way-to-get-the-absolute-value-of-a-number#2074403
 func Abs(x int) int {
     mask := x >> 31
     return (x + mask) ^ mask

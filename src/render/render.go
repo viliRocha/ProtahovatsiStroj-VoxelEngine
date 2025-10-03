@@ -12,12 +12,6 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-type Coords struct {
-    x int
-    y int
-    z int
-}
-
 func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	var vertices []float32
 	var indices []uint16
@@ -34,13 +28,13 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
      */
     Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
     for i := 0; i < Nx*Ny*Nz; i++ {
-        pos := Coords{
-            x: i / (Ny * Nz),
-            y: (i / Nz) % Ny,
-            z: i % Nz,
+        pos := pkg.Coords{
+            X: i / (Ny * Nz),
+            Y: (i / Nz) % Ny,
+            Z: i % Nz,
         }
 
-        voxel := chunk.Voxels[pos.x][pos.y][pos.z]
+        voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
         block := world.BlockTypes[voxel.Type]
 
         if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" {
@@ -55,9 +49,9 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
             for i := 0; i < 4; i++ {
                 v := pkg.FaceVertices[face][i]
                 vertices = append(vertices,
-                    float32(pos.x)+v[0],
-                    float32(pos.y)+v[1],
-                    float32(pos.z)+v[2],
+                    float32(pos.X)+v[0],
+                    float32(pos.Y)+v[1],
+                    float32(pos.Z)+v[2],
                 )
 
                 c := block.Color
@@ -106,20 +100,20 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	chunk.IsOutdated = false
 }
 
-func shouldDrawFace(chunk *pkg.Chunk, pos Coords, faceIndex int) bool {
+func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 	direction, max_size, max_height :=
         pkg.FaceDirections[faceIndex], int(pkg.ChunkSize - 1), int(pkg.ChunkHeight) - 1
 
     // Calculates the new coordinates based on the face direction
-    pos.x = int(pos.x+int(direction.X))
-    pos.y = int(pos.y+int(direction.Y))
-    pos.z = int(pos.z+int(direction.Z))
+    pos.X = int(pos.X+int(direction.X))
+    pos.Y = int(pos.Y+int(direction.Y))
+    pos.Z = int(pos.Z+int(direction.Z))
     
     // normalize the value of the coords to be within the range of 0-15
-    x, y, z := pkg.Clamp(pos.x, 0, max_size), pkg.Clamp(pos.y, 0, max_height), pkg.Clamp(pos.z, 0, max_size)
+    x, y, z := pkg.Clamp(pos.X, 0, max_size), pkg.Clamp(pos.Y, 0, max_height), pkg.Clamp(pos.Z, 0, max_size)
 
 	// Checks if the new coordinates are within the chunk bounds
-	if x == pos.x && y == pos.y && z == pos.z {
+	if x == pos.X && y == pos.Y && z == pos.Z {
         voxel_type := chunk.Voxels[x][y][z].Type
         return !world.BlockTypes[voxel_type].IsSolid
 	}
@@ -173,13 +167,13 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 
         Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
         for i := 0; i < Nx*Ny*Nz; i++ {
-            pos := Coords{
-                x: i / (Ny * Nz),
-                y: (i / Nz) % Ny,
-                z: i % Nz,
+            pos := pkg.Coords{
+                X: i / (Ny * Nz),
+                Y: (i / Nz) % Ny,
+                Z: i % Nz,
             }
 
-            voxel := chunk.Voxels[pos.x][pos.y][pos.z]
+            voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
             block := world.BlockTypes[voxel.Type]
 
             if !block.IsVisible || (block.Color.A < 255) != is_transparent {
@@ -187,9 +181,9 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
             }
 
             voxelPosition := rl.NewVector3(
-                chunkPosition.X+float32(pos.x),
-                chunkPosition.Y+float32(pos.y),
-                chunkPosition.Z+float32(pos.z),
+                chunkPosition.X+float32(pos.X),
+                chunkPosition.Y+float32(pos.Y),
+                chunkPosition.Z+float32(pos.Z),
             )
 
             switch voxel.Type {

@@ -45,6 +45,12 @@ type Chunk struct {
 	HasMesh    bool // Flag to know if the mesh has already been created
 }
 
+type Coords struct {
+    X int
+    Y int
+    Z int
+}
+
 var FaceDirections = []rl.Vector3{
 	{1, 0, 0},  // Front
 	{-1, 0, 0}, // Back

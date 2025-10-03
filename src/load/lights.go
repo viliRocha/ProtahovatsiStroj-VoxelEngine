@@ -41,21 +41,22 @@ func NewLight(
 	light := Light{
 		shader: shader,
 	}
-	if lightCount < maxLightsCount {
-		light.enabled = 1
-		light.lightType = lightType
-		light.position = position
-		light.target = target
-		light.color = color
-		light.enabledLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].enabled", lightCount))
-		light.typeLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].type", lightCount))
-		light.posLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].position", lightCount))
-		light.targetLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].target", lightCount))
-		light.colorLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].color", lightCount))
-		light.UpdateValues()
-		lightCount++
+	if lightCount > maxLightsCount {
+		return light
 	}
-	return light
+    light.enabled = 1
+    light.lightType = lightType
+    light.position = position
+    light.target = target
+    light.color = color
+    light.enabledLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].enabled", lightCount))
+    light.typeLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].type", lightCount))
+    light.posLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].position", lightCount))
+    light.targetLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].target", lightCount))
+    light.colorLoc = rl.GetShaderLocation(shader, fmt.Sprintf("lights[%d].color", lightCount))
+    light.UpdateValues()
+    lightCount++
+    return light
 }
 
 func (lt *Light) UpdateValues() {
