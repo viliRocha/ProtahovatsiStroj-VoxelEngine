@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-    "time"
+	"time"
 
 	"go-engine/src/pkg"
 
@@ -16,66 +16,66 @@ import (
 
 // see https://github.com/adct-the-experimenter/Raylib_VoxelEngine/blob/main/blockfacehelper.c for inspiration
 type BlockProperties struct {
-    Texture   rl.Texture2D
-    Color     rl.Color
-    IsSolid   bool
-    IsVisible bool
+	Texture   rl.Texture2D
+	Color     rl.Color
+	IsSolid   bool
+	IsVisible bool
 }
 
 var BlockTypes = map[string]BlockProperties{
 	"Grass": {
-        Texture:     rl.LoadTexture("../assets/blocks/block.png"),
-        Color:       rl.NewColor(72, 174, 34, 255), // Green
-        IsSolid:     true,
-        IsVisible:   true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(72, 174, 34, 255), // Green
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Dirt": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.Brown,
-        IsSolid:      true,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.Brown,
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Sand": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.NewColor(236, 221, 178, 255), //	Beige
-        IsSolid:      true,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(236, 221, 178, 255), //	Beige
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Stone": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.Gray,
-        IsSolid:      true,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.Gray,
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Wood": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.NewColor(126, 90, 57, 255), // Light brown
-        IsSolid:      true,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(126, 90, 57, 255), // Light brown
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Leaves": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.NewColor(73, 129, 49, 255), // Dark green
-        IsSolid:      true,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(73, 129, 49, 255), // Dark green
+		IsSolid:   true,
+		IsVisible: true,
 	},
 	"Plant": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.Red,
-        IsSolid:      false,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.Red,
+		IsSolid:   false,
+		IsVisible: true,
 	},
 	"Water": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.NewColor(0, 0, 255, 110), // Transparent blue
-        IsSolid:      false,
-        IsVisible:    true,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(0, 0, 255, 110), // Transparent blue
+		IsSolid:   false,
+		IsVisible: true,
 	},
 	"Air": {
-        Texture:      rl.LoadTexture("../assets/blocks/block.png"),
-        Color:        rl.NewColor(0, 0, 0, 0), // Transparent
-        IsSolid:      false,
-        IsVisible:    false,
+		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
+		Color:     rl.NewColor(0, 0, 0, 0), // Transparent
+		IsSolid:   false,
+		IsVisible: false,
 	},
 }
 
@@ -99,32 +99,32 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 		}
 		return
 	}
-    plantCount := rand.Intn(pkg.ChunkSize / 2)
+	plantCount := rand.Intn(pkg.ChunkSize / 2)
 
-    for i := 0; i < plantCount; i++ {
-        x := rand.Intn(pkg.ChunkSize)
-        z := rand.Intn(pkg.ChunkSize)
+	for i := 0; i < plantCount; i++ {
+		x := rand.Intn(pkg.ChunkSize)
+		z := rand.Intn(pkg.ChunkSize)
 
-        // Iterate from the top to the bottom of the chunk to find the surface
-        for y := pkg.ChunkSize - 1; y >= 0; y-- {
-            // Ensure plants are only placed above layer 13 (water)
-            if !BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid || y > pkg.ChunkSize && y < waterLevel {
-                break
-            }
-            // Randomly define a model for the plant
-            randomModel := rand.Intn(4) // 0 - 3
-            chunk.Voxels[x][y+1][z] = pkg.VoxelData{
-                Type:  "Plant",
-                Model: pkg.PlantModels[randomModel],
-            }
-            plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
-            chunk.Plants = append(chunk.Plants, pkg.PlantData{
-                Position: plantPos,
-                ModelID:  randomModel,
-            })
-            break
-        }
-    }
+		// Iterate from the top to the bottom of the chunk to find the surface
+		for y := pkg.ChunkSize - 1; y >= 0; y-- {
+			// Ensure plants are only placed above layer 13 (water)
+			if !BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid || y > pkg.ChunkSize && y < waterLevel {
+				break
+			}
+			// Randomly define a model for the plant
+			randomModel := rand.Intn(4) // 0 - 3
+			chunk.Voxels[x][y+1][z] = pkg.VoxelData{
+				Type:  "Plant",
+				Model: pkg.PlantModels[randomModel],
+			}
+			plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
+			chunk.Plants = append(chunk.Plants, pkg.PlantData{
+				Position: plantPos,
+				ModelID:  randomModel,
+			})
+			break
+		}
+	}
 }
 
 func mod(a, b int) int {
@@ -145,11 +145,11 @@ func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 	for range iterations {
 		var newResult string
 		for _, char := range result {
-            if replacement, ok := rules[char]; ok {
-                newResult += replacement
-                continue
-            }
-            newResult += string(char)
+			if replacement, ok := rules[char]; ok {
+				newResult += replacement
+				continue
+			}
+			newResult += string(char)
 		}
 		result = newResult
 	}
@@ -171,10 +171,10 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 		switch char {
 		case 'F': // Create wood blocks for tree tunks
-            //	Gurantee values are within bounds
-            PosY := int(currentPos.Y)
-            PosX := int(currentPos.X)
-            PosZ := int(currentPos.Z)
+			//	Gurantee values are within bounds
+			PosY := int(currentPos.Y)
+			PosX := int(currentPos.X)
+			PosZ := int(currentPos.Z)
 
 			if PosX >= 0 && PosX < int(pkg.ChunkSize) &&
 				PosY >= 0 && PosY < int(pkg.ChunkHeight) &&
@@ -200,56 +200,56 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 		case '\\': //  Move back (negative Z-axis)
 			direction = rl.Vector3{0, 0, -1}
 
-        case '[': // Save the current position and direction
+		case '[': // Save the current position and direction
 			stack = append(stack, currentPos)
 
-        case ']': // Restore the last saved position
+		case ']': // Restore the last saved position
 			currentPos = stack[len(stack)-1]
 			stack = stack[:len(stack)-1] //	Removes the last item from the stack
 
-        case 'A': // Create simple branch (diagonal movement without rotation)
-            // Checks if the next character is '('
-            if i+1 < len(treeStructure) && treeStructure[i+1] == '(' {
-                // Reads the numeric value in parentheses
-                end := i + 2
-                for end < len(treeStructure) && treeStructure[end] != ')' {
-                    end++
-                }
+		case 'A': // Create simple branch (diagonal movement without rotation)
+			// Checks if the next character is '('
+			if i+1 < len(treeStructure) && treeStructure[i+1] == '(' {
+				// Reads the numeric value in parentheses
+				end := i + 2
+				for end < len(treeStructure) && treeStructure[end] != ')' {
+					end++
+				}
 
-                if end < len(treeStructure) && treeStructure[end] == ')' {
-                    // Extracts the number as string and converts to integer
-                    branchDepthStr := treeStructure[i+2 : end]
-                    branchDepth, err := strconv.Atoi(branchDepthStr)
-                    if err == nil {
-                        // Handles the branch with the defined depth
-                        for range branchDepth {
-                            // Calculates new direction based on current angle
-                            radians := currentAngle * (math.Pi / 180.0) // Converts to radians
-                            // Adjusts X and Z based on angle and keeps Y rising
-                            newDir := rl.Vector3{
-                                float32(math.Cos(radians)),
-                                1.0,
-                                float32(math.Sin(radians)),
-                            }
+				if end < len(treeStructure) && treeStructure[end] == ')' {
+					// Extracts the number as string and converts to integer
+					branchDepthStr := treeStructure[i+2 : end]
+					branchDepth, err := strconv.Atoi(branchDepthStr)
+					if err == nil {
+						// Handles the branch with the defined depth
+						for range branchDepth {
+							// Calculates new direction based on current angle
+							radians := currentAngle * (math.Pi / 180.0) // Converts to radians
+							// Adjusts X and Z based on angle and keeps Y rising
+							newDir := rl.Vector3{
+								float32(math.Cos(radians)),
+								1.0,
+								float32(math.Sin(radians)),
+							}
 
-                            pos := pkg.Coords{
-                                int(currentPos.X + newDir.X),
-                                int(currentPos.Y + newDir.Y),
-                                int(currentPos.Z + newDir.Z),
-                            }
+							pos := pkg.Coords{
+								int(currentPos.X + newDir.X),
+								int(currentPos.Y + newDir.Y),
+								int(currentPos.Z + newDir.Z),
+							}
 
-                            // Ensures that the blocks position is within bounds
-                            if pos.X >= 0 && pos.X < pkg.ChunkSize &&
-                                pos.Y >= 0 && pos.Y < int(pkg.ChunkHeight) &&
-                                pos.Z >= 0 && pos.Z < pkg.ChunkSize {
-                                    chunk.Voxels[pos.X][pos.Y][pos.Z] = pkg.VoxelData{Type: "Wood"}
-                                }
-                            currentPos = rl.Vector3{float32(pos.X), float32(pos.Y), float32(pos.Z)}
-                            // Increases the angle to open the next branch
-                            currentAngle += angleIncrement
-                        }
+							// Ensures that the blocks position is within bounds
+							if pos.X >= 0 && pos.X < pkg.ChunkSize &&
+								pos.Y >= 0 && pos.Y < int(pkg.ChunkHeight) &&
+								pos.Z >= 0 && pos.Z < pkg.ChunkSize {
+								chunk.Voxels[pos.X][pos.Y][pos.Z] = pkg.VoxelData{Type: "Wood"}
+							}
+							currentPos = rl.Vector3{float32(pos.X), float32(pos.Y), float32(pos.Z)}
+							// Increases the angle to open the next branch
+							currentAngle += angleIncrement
+						}
 					}
-					// Updates the index to continue after 
+					// Updates the index to continue after
 					i = end
 				}
 			}
@@ -259,87 +259,131 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 			radius := 2.0 // Radius of the leaf circle
 
 			for i := range numLeaves {
-                angle := float64(i) * (2 * math.Pi / float64(numLeaves)) // Calculate leaf cluster angle
-                mCos := float32(radius * math.Cos(angle))
+				angle := float64(i) * (2 * math.Pi / float64(numLeaves)) // Calculate leaf cluster angle
+				mCos := float32(radius * math.Cos(angle))
 
-                // "l": leafPos
-                lx := int(currentPos.X + mCos)
-                ly := int(currentPos.Y + mCos)
-                lz := int(currentPos.Z + float32(radius * math.Sin(angle)))
+				// "l": leafPos
+				lx := int(currentPos.X + mCos)
+				ly := int(currentPos.Y + mCos)
+				lz := int(currentPos.Z + float32(radius*math.Sin(angle)))
 
-                if lx >= 0 && lx < pkg.ChunkSize && ly >= 0 && ly < int(pkg.ChunkHeight) && lz >= 0 && lz < pkg.ChunkSize {
-                    chunk.Voxels[lx][ly][lz] = pkg.VoxelData{Type: "Leaves"}
-                }
+				if lx >= 0 && lx < pkg.ChunkSize && ly >= 0 && ly < int(pkg.ChunkHeight) && lz >= 0 && lz < pkg.ChunkSize {
+					chunk.Voxels[lx][ly][lz] = pkg.VoxelData{Type: "Leaves"}
+				}
 			}
 		}
 	}
 }
 
 func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
-    waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
-    rules := parseLSystemRule(lsystemRule)
-    treeStructure := applyLSystem("F", rules, 2)
-    treeCount := rand.Intn(pkg.ChunkSize / 8)
+	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	rules := parseLSystemRule(lsystemRule)
+	treeStructure := applyLSystem("F", rules, 2)
+	treeCount := rand.Intn(pkg.ChunkSize / 8)
 
-    for range treeCount {
-        x := rand.Intn(pkg.ChunkSize)
-        z := rand.Intn(pkg.ChunkSize)
+	for range treeCount {
+		x := rand.Intn(pkg.ChunkSize)
+		z := rand.Intn(pkg.ChunkSize)
 
-        // Iterate over the chunk to find the surface height of the terrain
-        surfaceY := -1
-        for y := pkg.ChunkSize - 1; y >= 0; y-- {
-            if chunk.Voxels[x][y][z].Type != "Grass" { continue }
-            surfaceY = y
-            break
-        }
+		// Iterate over the chunk to find the surface height of the terrain
+		surfaceY := -1
+		for y := pkg.ChunkSize - 1; y >= 0; y-- {
+			if chunk.Voxels[x][y][z].Type != "Grass" {
+				continue
+			}
+			surfaceY = y
+			break
+		}
 
-        // Make sure the surface is valid and not in the water
-        if surfaceY < waterLevel {
-            continue
-        }
-        treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
+		// Make sure the surface is valid and not in the water
+		if surfaceY < waterLevel {
+			continue
+		}
+		treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
 
-        // Build the tree with the generated structure
-        placeTree(chunk, treePos, treeStructure)
-    }
+		// Build the tree with the generated structure
+		placeTree(chunk, treePos, treeStructure)
+	}
 }
 
 func genWaterFormations(chunk *pkg.Chunk) {
-    waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
 
-    // Creates a Perlin Noise generator
-    perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
+	// Creates a Perlin Noise generator - I don't know why you need more randomness for the generation of small sand structures but ok...
+	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
 
-    for x := range pkg.ChunkSize {
-        for z := range pkg.ChunkSize {
-            //	Water shouldn't replace solid blocks (go through them)
-            if chunk.Voxels[x][waterLevel][z].Type != "Air" {
-                continue
-            }
-            chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
+	for x := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
+			//	Water shouldn't replace solid blocks (go through them)
+			if chunk.Voxels[x][waterLevel][z].Type != "Air" {
+				continue
+			}
+			chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
 
-            for y := range pkg.ChunkSize {
-                // Checks adjacent blocks for generating sand
-                for dy := -3; dy <= 1; dy++ {
-                    for dx := -3; dx <= 3; dx++ {
-                        adjX := x + dx
-                        adjZ := z + dy
+			for y := range pkg.ChunkSize {
+				// Checks adjacent blocks for generating sand
+				for dy := -3; dy <= 1; dy++ {
+					for dx := -3; dx <= 3; dx++ {
+						adjX := x + dx
+						adjZ := z + dy
 
-                        //	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
-                        if adjX <= 0 && adjX > pkg.ChunkSize && adjZ <= 0 && adjZ > pkg.ChunkSize {
-                            continue
-                        }
-                        // Generate a Perlin Noise value
-                        noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
-                        voxel := chunk.Voxels[adjX][y][adjZ].Type
+						//  adjX and adjZ >= 0 ensures that it does not access negative indices.
+						//  adjX and adjZ < pkg.ChunkSize ensures that it does not exceed the chunk size.
+						if adjX < 0 || adjX >= pkg.ChunkSize || adjZ < 0 || adjZ >= pkg.ChunkSize {
+							continue
+						}
+						// Generate a Perlin Noise value
+						noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
+						voxel := chunk.Voxels[adjX][y][adjZ].Type
 
-                        // Replaces dirt and grass with sand
-                        if voxel == "Grass" || voxel == "Dirt" && noiseValue > 0.32 {
-                            chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
-                        }
-				    }
+						// Replaces dirt and grass with sand
+						if voxel == "Grass" || voxel == "Dirt" && noiseValue > 0.32 {
+							chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
+						}
+					}
 				}
-            }
+			}
 		}
 	}
 }
+
+/*
+func genWaterFormations(chunk *pkg.Chunk) {
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+
+	// Creates a Perlin Noise generator - I don't know why you need more randomness for the generation of small sand structures but ok...
+	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
+
+	for x := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
+			//	Water shouldn't replace solid blocks (go through them)
+			if chunk.Voxels[x][waterLevel][z].Type == "Air" {
+				chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
+
+				for y := range pkg.ChunkSize {
+					// Checks adjacent blocks for generating sand
+					for dy := -3; dy <= 1; dy++ {
+						for dx := -3; dx <= 3; dx++ {
+							adjX := x + dx
+							adjZ := z + dy
+
+							//	Ensures that adjX and adjZ are within the valid limits of the chunk.Voxels array
+							if adjX >= 0 && adjX < pkg.ChunkSize && adjZ >= 0 && adjZ < pkg.ChunkSize {
+								// Generate a Perlin Noise value
+								noiseValue := perlinNoise.Noise2D(float64(adjX)/10, float64(adjZ)/10)
+
+								if chunk.Voxels[adjX][y][adjZ].Type == "Grass" || chunk.Voxels[adjX][y][adjZ].Type == "Dirt" {
+									// Replaces dirt and grass with sand
+									if noiseValue > 0.32 {
+										chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+*/

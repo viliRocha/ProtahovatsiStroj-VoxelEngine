@@ -28,44 +28,43 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	for x := range pkg.ChunkSize {
-        axis:
-        for z := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
 			// Use Perlin noise to generate the height of the terrain
 			height := calculateHeight(position, p, x, z)
 
 			for y := range pkg.ChunkSize {
-                //	Grass shouldn't generate under water nor bellow other blocks
-                if y == height && y > waterLevel {
-                    chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
-                }
+				isSolid := y <= height
 
-                if y < waterLevel {
-                    chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
-                }
-                
-                if y == waterLevel {
-                    chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Sand"}
-                }
-
-                if y >= height {
-                    continue axis
-                }
-
-                chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
+				if isSolid {
+					//	Grass shouldn't generate under water nor bellow other blocks
+					if y == height && y > waterLevel {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
+					} else if y < waterLevel {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
+					} else if y == waterLevel {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Sand"}
+					} else if y <= height-5 {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
+					}
+				} else {
+					//	Air blocks need to be placed because water is only generated over Air blocks!!
+					//	Otherwise water wold be placed on the margins...
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+				}
 			}
 		}
 	}
-    // Add water to specific layer
-    genWaterFormations(chunk)
+	// Add water to specific layer
+	genWaterFormations(chunk)
 
-    //  Generate the plants after the terrain generation
-    generatePlants(chunk, position, reusePlants)
-    generateTrees(chunk, chooseRandomTree())
+	//  Generate the plants after the terrain generation
+	generatePlants(chunk, position, reusePlants)
+	generateTrees(chunk, chooseRandomTree())
 
-    // Marks the chunk as outdated so that the mesh can be generated
-    chunk.IsOutdated = true
+	// Marks the chunk as outdated so that the mesh can be generated
+	chunk.IsOutdated = true
 
-    return chunk
+	return chunk
 }
 
 func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
