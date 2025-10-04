@@ -68,7 +68,7 @@ func InitGame() Game {
 	chunkCache := world.NewChunkCache()                                                                                    // Initialize ChunkCache
 	chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
 
-	rl.SetTargetFPS(40)
+	rl.SetTargetFPS(60)
 
 	return Game{
 		Camera:      camera,

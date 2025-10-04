@@ -1,6 +1,7 @@
 package world
 
 import (
+	"runtime"
 	"sync"
 
 	"go-engine/src/pkg"
@@ -8,6 +9,8 @@ import (
 	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
+
+var OppositeFaces = [6]int{1, 0, 3, 2, 5, 4}
 
 type ChunkCache struct {
 	Chunks     map[rl.Vector3]*pkg.Chunk
@@ -57,24 +60,37 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	playerChunkX := int(playerPosition.X) / pkg.ChunkSize
 	playerChunkZ := int(playerPosition.Z) / pkg.ChunkSize
 
-	var wg sync.WaitGroup
-	// Load chunks within the range
+	chunkRequests := make(chan rl.Vector3, 100)
+	done := make(chan struct{})
+
+	// Worker pool
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go func() {
+			for cp := range chunkRequests {
+				//fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
+				chunkCache.GetChunk(cp, p)
+				//fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
+			}
+			done <- struct{}{}
+		}()
+	}
+
+	// Send the chunk positions to be loaded
 	for x := playerChunkX - pkg.ChunkDistance; x <= playerChunkX+pkg.ChunkDistance; x++ {
 		for z := playerChunkZ - pkg.ChunkDistance; z <= playerChunkZ+pkg.ChunkDistance; z++ {
 			chunkPosition := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
 			if _, exists := chunkCache.Chunks[chunkPosition]; !exists {
-				wg.Add(1)
 				//fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
-				go func(cp rl.Vector3) {
-					defer wg.Done()
-					//fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-					chunkCache.GetChunk(cp, p)
-					//fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-				}(chunkPosition)
+				chunkRequests <- chunkPosition
 			}
 		}
 	}
-	wg.Wait()
+	close(chunkRequests)
+
+	// Wait for all workers to finish
+	for i := 0; i < runtime.NumCPU(); i++ {
+		<-done
+	}
 
 	// Ensures that each chunk on the chunkCache.chunks map has up-to-date references to its neighboring chunks in all directions
 	for chunkPos, chunk := range chunkCache.Chunks {
@@ -82,6 +98,13 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 			neighborPos := rl.NewVector3(chunkPos.X+direction.X*float32(pkg.ChunkSize), chunkPos.Y, chunkPos.Z+direction.Z*float32(pkg.ChunkSize))
 			if neighbor, exists := chunkCache.Chunks[neighborPos]; exists {
 				chunk.Neighbors[i] = neighbor
+				/*
+					neighbor.Neighbors[OppositeFaces[i]] = chunk
+
+					// Marcar como desatualizado para forçar reconstrução da mesh
+					chunk.IsOutdated = true
+					neighbor.IsOutdated = true
+				*/
 			} else {
 				chunk.Neighbors[i] = nil
 			}

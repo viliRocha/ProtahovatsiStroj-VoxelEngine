@@ -69,7 +69,7 @@ var BlockTypes = map[string]BlockProperties{
 
 // Generate vegetation at random surface positions
 func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	if reusePlants {
 		fmt.Println("Reusing plants:", len(chunk.Plants))
@@ -264,7 +264,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 }
 
 func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	rules := parseLSystemRule(lsystemRule)
 
@@ -296,7 +296,7 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 }
 
 func genWaterFormations(chunk *pkg.Chunk) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	// Creates a Perlin Noise generator
 	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
