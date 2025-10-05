@@ -7,15 +7,15 @@ import (
 var PlantModels [4]rl.Model
 
 const (
-	ChunkHeight        int16   = 80
+	ChunkHeight        int     = 80
 	ChunkSize          int     = 32
-	ChunkDistance      int   = 1
+	ChunkDistance      int     = 1
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 
 type VoxelData struct {
-    Type  string
-    Model rl.Model
+	Type  string
+	Model rl.Model
 }
 
 // Stores plant positions
@@ -25,10 +25,10 @@ type PlantData struct {
 }
 
 type Chunk struct {
-    //Materials rl.Material
-    Voxels    [ChunkSize][ChunkHeight][ChunkSize]VoxelData
-    Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
-    Plants    []PlantData
+	//Materials rl.Material
+	Voxels    [ChunkSize][ChunkHeight][ChunkSize]VoxelData
+	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
+	Plants    []PlantData
 
 	Mesh       rl.Mesh
 	Model      rl.Model
@@ -37,9 +37,9 @@ type Chunk struct {
 }
 
 type Coords struct {
-    X int
-    Y int
-    Z int
+	X int
+	Y int
+	Z int
 }
 
 var FaceDirections = []rl.Vector3{
@@ -140,11 +140,11 @@ func GetFaceGeometry(faceIndex int, x, y, z float32) ([]rl.Vector3, []rl.Vector3
 }
 
 func Transform(val, min, max int) (int, bool) {
-    if val < min {
-        return max, false
-    }
-    if val > max {
-        return min, false
-    }
-    return val, true
+	if val < min {
+		return max, false
+	}
+	if val > max {
+		return min, false
+	}
+	return val, true
 }

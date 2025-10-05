@@ -10,7 +10,6 @@ import (
 
 func main() {
 	game := load.InitGame()
-    rl.DisableCursor()
 
 	// Main game loop
 	for !rl.WindowShouldClose() {
@@ -19,14 +18,14 @@ func main() {
 			game.CameraMode = rl.CameraFree
 			game.Camera.Up = rl.Vector3{X: 0.0, Y: 1.0, Z: 0.0} // Reset roll
 		}
-        
-        if rl.IsKeyDown(rl.KeySpace) {
-            game.Camera.Position.Y += 0.1
-        }
 
-        if rl.IsKeyDown(rl.KeyLeftShift) {
-            game.Camera.Position.Y -= 0.1
-        }
+		if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			rl.DisableCursor()
+		}
+
+		if rl.IsKeyDown(rl.KeyLeftShift) {
+			game.Camera.Position.Y -= 0.1
+		}
 
 		rl.UpdateCamera(&game.Camera, game.CameraMode)
 
@@ -36,8 +35,8 @@ func main() {
 		//  Draw
 		render.RenderGame(&game)
 	}
-    //rl.UnloadShader(shader)
-    //rl.UnloadModel(cube)
+	//rl.UnloadShader(shader)
+	//rl.UnloadModel(cube)
 
 	// After the loop ends:
 	defer rl.CloseWindow()

@@ -327,7 +327,7 @@ func genWaterFormations(chunk *pkg.Chunk) {
 						voxel := chunk.Voxels[adjX][y][adjZ].Type
 
 						// Replaces dirt and grass with sand
-						if voxel == "Grass" || voxel == "Dirt" && noiseValue > 0.32 {
+						if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
 							chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
 						}
 					}
