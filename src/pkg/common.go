@@ -7,19 +7,10 @@ import (
 var PlantModels [4]rl.Model
 
 const (
-	ChunkHeight        int16   = 64
-	ChunkSize          int     = 16
-	ChunkDistance      int16   = 4
+	ChunkHeight        int16   = 80
+	ChunkSize          int     = 32
+	ChunkDistance      int   = 1
 	WaterLevelFraction float64 = 0.375 // 3/8
-
-	ScreenWidth  int32 = 1000
-	ScreenHeight int32 = 650
-	//  Control of the intensity/amplitude of the noise
-	PerlinAlpha = 18.0
-	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
-	PerlinBeta = 2.5
-	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
-	PerlinN = int32(2)
 )
 
 type VoxelData struct {

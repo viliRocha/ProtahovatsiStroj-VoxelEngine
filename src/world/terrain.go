@@ -42,8 +42,6 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
 					} else if y < waterLevel {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
-					} else if y == waterLevel {
-						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Sand"}
 					} else if y <= height-5 {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
 					}

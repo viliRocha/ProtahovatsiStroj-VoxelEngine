@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	"go-engine/src/pkg"
 
@@ -16,7 +15,6 @@ import (
 
 // see https://github.com/adct-the-experimenter/Raylib_VoxelEngine/blob/main/blockfacehelper.c for inspiration
 type BlockProperties struct {
-	Texture   rl.Texture2D
 	Color     rl.Color
 	IsSolid   bool
 	IsVisible bool
@@ -24,55 +22,46 @@ type BlockProperties struct {
 
 var BlockTypes = map[string]BlockProperties{
 	"Grass": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(72, 174, 34, 255), // Green
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Dirt": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.Brown,
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Sand": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(236, 221, 178, 255), //	Beige
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Stone": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.Gray,
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Wood": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(126, 90, 57, 255), // Light brown
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Leaves": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(73, 129, 49, 255), // Dark green
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Plant": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.Red,
 		IsSolid:   false,
 		IsVisible: true,
 	},
 	"Water": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(0, 0, 255, 110), // Transparent blue
 		IsSolid:   false,
 		IsVisible: true,
 	},
 	"Air": {
-		Texture:   rl.LoadTexture("../assets/blocks/block.png"),
 		Color:     rl.NewColor(0, 0, 0, 0), // Transparent
 		IsSolid:   false,
 		IsVisible: false,
@@ -310,8 +299,8 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 func genWaterFormations(chunk *pkg.Chunk) {
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
-	// Creates a Perlin Noise generator - I don't know why you need more randomness for the generation of small sand structures but ok...
-	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
+	// Creates a Perlin Noise generator
+	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {

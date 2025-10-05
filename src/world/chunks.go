@@ -84,14 +84,6 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 				//fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
 				chunkRequests <- chunkPosition
 			}
-            wg.Add(1)
-            //fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
-            go func(cp rl.Vector3) {
-                defer wg.Done()
-                //fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-                chunkCache.GetChunk(cp, p)
-                //fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
-            }(chunkPosition)
 		}
 	}
 	close(chunkRequests)
