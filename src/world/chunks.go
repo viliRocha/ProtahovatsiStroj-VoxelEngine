@@ -7,7 +7,7 @@ import (
 	"go-engine/src/pkg"
 
 	"github.com/aquilax/go-perlin"
-	rl "github.com/gen2brain/raylib-go/raylib"
+    rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 var OppositeFaces = [6]int{1, 0, 3, 2, 5, 4}
@@ -35,11 +35,11 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 		updatedChunk.IsOutdated = true
 		cc.Chunks[position] = updatedChunk
 		return updatedChunk
-	} else {
-		chunk := GenerateAbovegroundChunk(position, p, false)
-		cc.Chunks[position] = chunk
-		return chunk
 	}
+
+    chunk := GenerateAbovegroundChunk(position, p, false)
+    cc.Chunks[position] = chunk
+    return chunk
 }
 
 func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
@@ -48,9 +48,10 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 
 	playerChunkX := int(playerPosition.X) / pkg.ChunkSize
 	playerChunkZ := int(playerPosition.Z) / pkg.ChunkSize
+    chDist := int(pkg.ChunkDistance)
 
 	for position := range cc.Chunks {
-		if abs(int(position.X)/pkg.ChunkSize-playerChunkX) > pkg.ChunkDistance || abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > pkg.ChunkDistance {
+		if Abs(int(position.X)/pkg.ChunkSize-playerChunkX) > chDist || Abs(int(position.Z)/pkg.ChunkSize-playerChunkZ) > chDist {
 			delete(cc.Chunks, position)
 		}
 	}
@@ -116,9 +117,8 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 }
 
 // Function to calculate the absolute value
-func abs(x int) int {
-	if x < 0 {
-		return -x
-	}
-	return x
+// https://stackoverflow.com/questions/664852/which-is-the-fastest-way-to-get-the-absolute-value-of-a-number#2074403
+func Abs(x int) int {
+    mask := x >> 31
+    return (x + mask) ^ mask
 }

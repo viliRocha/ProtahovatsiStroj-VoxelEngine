@@ -8,7 +8,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-const perlinFrequency = 0.03
+const perlinFrequency = 0.04
 
 func chooseRandomTree() string {
 	model := rand.Intn(10)
@@ -16,7 +16,6 @@ func chooseRandomTree() string {
 	switch {
 	case model > 4:
 		return "F=F[FA(3)L][FA(3)L][FA(3)L]A(3)"
-
 	case model < 2:
 		return "F=F[A(3)L]F[-A(2)L]F[/A(2)L]F[+A(1)L]"
 	default:
@@ -38,29 +37,28 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 				isSolid := y <= height
 
 				if isSolid {
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
-
-					//	Grass shouldn't generate under water
+					//	Grass shouldn't generate under water nor bellow other blocks
 					if y == height && y > waterLevel {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
+					} else if y < waterLevel {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
 					} else if y <= height-5 {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
 					}
 				} else {
+					//	Air blocks need to be placed because water is only generated over Air blocks!!
+					//	Otherwise water wold be placed on the margins...
 					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 				}
 			}
 		}
 	}
-	//fmt.Println(len(chunk.Plants))
+	// Add water to specific layer
+	genWaterFormations(chunk)
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)
-
 	generateTrees(chunk, chooseRandomTree())
-
-	// Add water to specific layer
-	genWaterFormations(chunk)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true

@@ -10,23 +10,22 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-func RenderVoxels(game *load.Game, renderTransparent bool) {
-	if renderTransparent {
+func RenderVoxels(game *load.Game, is_transparent bool) {
+	if is_transparent {
 		rl.SetBlendMode(rl.BlendAlpha)
 	}
-	/*
-		view := rl.GetCameraMatrix(game.Camera)
-		projection := rl.GetCameraMatrix(game.Camera)
 
-		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
-		rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
-		projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
-	*/
+	view := rl.GetCameraMatrix(game.Camera)
+	projection := rl.GetCameraMatrix(game.Camera)
+
+	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
+	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
+	//projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 
 	for chunkPosition, chunk := range game.ChunkCache.Chunks {
 		// Build mesh only once if needed
 		if chunk.IsOutdated {
-			BuildChunkMesh(chunk, chunkPosition)
+			BuildChunkMesh(chunk, chunkPosition /*, game.LightPosition*/)
 		}
 
 		// If the chunk has mesh, draw directly
@@ -34,40 +33,52 @@ func RenderVoxels(game *load.Game, renderTransparent bool) {
 			rl.DrawModel(chunk.Model, chunkPosition, 1.0, rl.White)
 		}
 
-		for x := range pkg.ChunkSize {
-			for y := range pkg.ChunkHeight {
-				for z := range pkg.ChunkSize {
-					voxel := chunk.Voxels[x][y][z]
-					block := world.BlockTypes[voxel.Type]
+		Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
+		for i := 0; i < Nx*Ny*Nz; i++ {
+			pos := pkg.Coords{
+				X: i / (Ny * Nz),
+				Y: (i / Nz) % Ny,
+				Z: i % Nz,
+			}
 
-					if !block.IsVisible || (block.Color.A < 255) != renderTransparent {
-						continue
-					}
+			voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
+			block := world.BlockTypes[voxel.Type]
 
-					voxelPosition := rl.NewVector3(
-						chunkPosition.X+float32(x),
-						chunkPosition.Y+float32(y),
-						chunkPosition.Z+float32(z),
-					)
+			if !block.IsVisible || (block.Color.A < 255) != is_transparent {
+				continue
+			}
 
-					switch voxel.Type {
-					case "Plant":
-						rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+			voxelPosition := rl.NewVector3(
+				chunkPosition.X+float32(pos.X),
+				chunkPosition.Y+float32(pos.Y),
+				chunkPosition.Z+float32(pos.Z),
+			)
 
-					case "Water":
-						voxelPosition.X += 0.5
-						voxelPosition.Y += 0.5
-						voxelPosition.Z += 0.5
+			/*
+				lightIntensity := calculateLightIntensity(voxelPosition, game.LightPosition)
+				voxelColor := applyLighting(world.BlockTypes[voxel.Type].Color, lightIntensity)
+			*/
 
-						rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
-					}
-				}
+			switch voxel.Type {
+			case "Plant":
+				rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
+			case "Water":
+				voxelPosition.X += 0.5
+				voxelPosition.Y += 0.5
+				voxelPosition.Z += 0.5
+
+				rl.DrawPlane(voxelPosition, rl.NewVector2(1.0, 1.0), world.BlockTypes[voxel.Type].Color)
+
+				/*
+				   modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
+				   rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
+				*/
 			}
 		}
 	}
 
 	//	Disable blending after yielding water
-	if renderTransparent {
+	if is_transparent {
 		rl.SetBlendMode(rl.BlendMode(0))
 	}
 }
