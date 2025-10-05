@@ -20,7 +20,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 
 ## Screenshots 🖼️
 <img src="./img/lighting2.png" alt="light" width="1000px">
-<img src="./img/landscape7.png" alt="world_gen" width="1000px">
+<img src="./img/landscape8.png" alt="world_gen" width="1000px">
 <img src="./img/landscape6.png" alt="world_gen" width="1000px">
 
 ## Getting Started 🚀

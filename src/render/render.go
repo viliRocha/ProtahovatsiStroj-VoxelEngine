@@ -3,7 +3,7 @@ package render
 import (
 	"fmt"
 	"unsafe"
-    "math/rand"
+  "math/rand"
 
 	"go-engine/src/load"
 	"go-engine/src/pkg"
@@ -216,7 +216,7 @@ func RenderGame(game *load.Game) {
 	rl.EndMode3D()
 
 	// Apply light blue filter - for underwater
-	if game.Camera.Position.Y < float32(waterLevel)+0.5 {
+	if game.Camera.Position.Y < float32(waterLevel)-0.5 {
 		rl.SetBlendMode(rl.BlendMode(0))
 		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
 	}

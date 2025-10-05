@@ -41,7 +41,6 @@ func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
 
 func InitGame() Game {
     rl.SetConfigFlags(rl.FlagWindowResizable)
-    rl.SetConfigFlags(rl.FlagMsaa4xHint)
     rl.InitWindow(pkg.ScreenWidth, pkg.ScreenHeight, "Protahovatsi Stroj - Voxel Game")
 
     camera := rl.Camera{

@@ -81,7 +81,7 @@ var BlockTypes = map[string]BlockProperties{
 
 // Generate vegetation at random surface positions
 func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	if reusePlants {
 		fmt.Println("Reusing plants:", len(chunk.Plants))
@@ -276,7 +276,8 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 }
 
 func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+
 	rules := parseLSystemRule(lsystemRule)
 	treeStructure := applyLSystem("F", rules, 2)
 	treeCount := rand.Intn(pkg.ChunkSize / 8)
@@ -307,7 +308,7 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 }
 
 func genWaterFormations(chunk *pkg.Chunk) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	// Creates a Perlin Noise generator - I don't know why you need more randomness for the generation of small sand structures but ok...
 	perlinNoise := perlin.NewPerlin(2, 2, 4, int64(time.Now().Unix()))
