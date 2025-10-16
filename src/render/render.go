@@ -33,7 +33,7 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 			rl.DrawModel(chunk.Model, chunkPosition, 1.0, rl.White)
 		}
 
-		Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
+		Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
 		for i := 0; i < Nx*Ny*Nz; i++ {
 			pos := pkg.Coords{
 				X: i / (Ny * Nz),

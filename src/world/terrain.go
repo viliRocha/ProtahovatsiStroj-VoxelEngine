@@ -28,33 +28,42 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 1
 
-	for x := range pkg.ChunkSize {
-		for z := range pkg.ChunkSize {
-			// Use Perlin noise to generate the height of the terrain
-			height := calculateHeight(position, p, x, z)
+	threshold := 0.1 // Densidade mínima para ser sólido
 
-			for y := range pkg.ChunkSize {
-				isSolid := y <= height
+	for x := 0; x < pkg.ChunkSize; x++ {
+		for y := 0; y < pkg.ChunkSize; y++ {
+			for z := 0; z < pkg.ChunkSize; z++ {
+				// Coordenadas globais
+				globalX := int(position.X) + x
+				globalY := int(position.Y) + y
+				globalZ := int(position.Z) + z
 
-				if isSolid {
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
+				// Ruído 3D para densidade
+				noise := p.Noise3D(float64(globalX)*perlinFrequency, float64(globalY)*perlinFrequency, float64(globalZ)*perlinFrequency)
 
-					//	Grass shouldn't generate under water
-					if y == height && y > waterLevel {
-						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
-					} else if y <= height-5 {
-						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
+				// Threshold define se o voxel é sólido
+				if noise > threshold {
+					// Bloco sólido
+					blockType := "Dirt"
+
+					if globalY < waterLevel-5 {
+						blockType = "Stone"
+					} else if globalY > waterLevel+5 {
+						blockType = "Grass"
 					}
+
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: blockType}
 				} else {
-					//	Air blocks need to be placed because water is only generated over Air blocks!!
-					//	Otherwise water wold be placed on the margins...
+					// Bloco vazio
 					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 				}
 			}
 		}
 	}
 	// Add water to specific layer
-	genWaterFormations(chunk)
+	if int(position.Y) == 0 {
+		genWaterFormations(chunk)
+	}
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, reusePlants)

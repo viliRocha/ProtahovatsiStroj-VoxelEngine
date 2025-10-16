@@ -102,15 +102,17 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 			}
 			// Randomly define a model for the plant
 			randomModel := rand.Intn(4) // 0 - 3
-			chunk.Voxels[x][y+1][z] = pkg.VoxelData{
-				Type:  "Plant",
-				Model: pkg.PlantModels[randomModel],
+			if y+1 < pkg.ChunkSize {
+				chunk.Voxels[x][y+1][z] = pkg.VoxelData{
+					Type:  "Plant",
+					Model: pkg.PlantModels[randomModel],
+				}
+				plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
+				chunk.Plants = append(chunk.Plants, pkg.PlantData{
+					Position: plantPos,
+					ModelID:  randomModel,
+				})
 			}
-			plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
-			chunk.Plants = append(chunk.Plants, pkg.PlantData{
-				Position: plantPos,
-				ModelID:  randomModel,
-			})
 			break
 		}
 	}
@@ -166,7 +168,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 			PosZ := int(currentPos.Z)
 
 			if PosX >= 0 && PosX < int(pkg.ChunkSize) &&
-				PosY >= 0 && PosY < int(pkg.ChunkHeight) &&
+				PosY >= 0 && PosY < int(pkg.ChunkSize) &&
 				PosZ >= 0 && PosZ < int(pkg.ChunkSize) {
 				chunk.Voxels[PosX][PosY][PosZ] = pkg.VoxelData{Type: "Wood"}
 			}
@@ -229,7 +231,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 							// Ensures that the blocks position is within bounds
 							if pos.X >= 0 && pos.X < pkg.ChunkSize &&
-								pos.Y >= 0 && pos.Y < int(pkg.ChunkHeight) &&
+								pos.Y >= 0 && pos.Y < int(pkg.ChunkSize) &&
 								pos.Z >= 0 && pos.Z < pkg.ChunkSize {
 								chunk.Voxels[pos.X][pos.Y][pos.Z] = pkg.VoxelData{Type: "Wood"}
 							}
@@ -256,7 +258,7 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 				ly := int(currentPos.Y + mCos)
 				lz := int(currentPos.Z + float32(radius*math.Sin(angle)))
 
-				if lx >= 0 && lx < pkg.ChunkSize && ly >= 0 && ly < int(pkg.ChunkHeight) && lz >= 0 && lz < pkg.ChunkSize {
+				if lx >= 0 && lx < pkg.ChunkSize && ly >= 0 && ly < int(pkg.ChunkSize) && lz >= 0 && lz < pkg.ChunkSize {
 					chunk.Voxels[lx][ly][lz] = pkg.VoxelData{Type: "Leaves"}
 				}
 			}

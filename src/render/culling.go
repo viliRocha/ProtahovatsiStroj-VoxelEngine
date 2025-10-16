@@ -24,7 +24,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 	 * https://teotl.dev/vischunk/ (may be useful)
 	 * (AI was used to help the interpretation of some of those docs)
 	 */
-	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkHeight), int(pkg.ChunkSize)
+	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
 	for i := 0; i < Nx*Ny*Nz; i++ {
 		pos := pkg.Coords{
 			X: i / (Ny * Nz),
@@ -111,7 +111,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 	direction, max_size, max_height :=
-		pkg.FaceDirections[faceIndex], int(pkg.ChunkSize-1), int(pkg.ChunkHeight)-1
+		pkg.FaceDirections[faceIndex], int(pkg.ChunkSize-1), int(pkg.ChunkSize)-1
 
 	var vX bool
 	var vY bool

@@ -19,7 +19,7 @@ const (
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
 	perlinBeta = 1.5
 	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
-	perlinN = int32(2)
+	perlinN = int32(3)
 )
 
 type Game struct {
