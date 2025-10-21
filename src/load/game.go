@@ -15,11 +15,11 @@ const (
 	ScreenWidth  int32 = 1000
 	ScreenHeight int32 = 480
 	//  Control of the intensity/amplitude of the noise
-	perlinAlpha = 3.0
+	perlinAlpha = 3
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
 	perlinBeta = 1.5
 	//  Dimension of the space in which Perlin Noise is being calculated. For example, in 3D, it would be 3.
-	perlinN = int32(3)
+	perlinN = int32(2)
 )
 
 type Game struct {

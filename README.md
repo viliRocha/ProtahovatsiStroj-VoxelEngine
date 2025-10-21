@@ -8,6 +8,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Precedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
+- **Cave Generation**: Intricate cave systems made using 3D perlin noise.
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
 ## Upcoming Features 📋
@@ -15,12 +16,11 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Fog Effects**: Create atmospheric depth with fog.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes for a richer exploration experience.
-- **Cave Generation**: Create intricate cave systems for players to discover.
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
 <img src="./img/lighting2.png" alt="light" width="1000px">
-<img src="./img/landscape8.png" alt="world_gen" width="1000px">
+<img src="./img/landscape9.png" alt="world_gen" width="1000px">
 <img src="./img/landscape6.png" alt="world_gen" width="1000px">
 
 ## Getting Started 🚀

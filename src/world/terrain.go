@@ -28,33 +28,26 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 1
 
-	threshold := 0.1 // Densidade mínima para ser sólido
+	for x := range pkg.ChunkSize {
+		for z := range pkg.ChunkSize {
+			// Use Perlin noise to generate the height of the terrain
+			height := calculateHeight(position, p, x, z)
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for y := 0; y < pkg.ChunkSize; y++ {
-			for z := 0; z < pkg.ChunkSize; z++ {
-				// Coordenadas globais
-				globalX := int(position.X) + x
-				globalY := int(position.Y) + y
-				globalZ := int(position.Z) + z
+			for y := range pkg.ChunkSize {
+				isSolid := y <= height
 
-				// Ruído 3D para densidade
-				noise := p.Noise3D(float64(globalX)*perlinFrequency, float64(globalY)*perlinFrequency, float64(globalZ)*perlinFrequency)
+				if isSolid {
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Dirt"}
 
-				// Threshold define se o voxel é sólido
-				if noise > threshold {
-					// Bloco sólido
-					blockType := "Dirt"
-
-					if globalY < waterLevel-5 {
-						blockType = "Stone"
-					} else if globalY > waterLevel+5 {
-						blockType = "Grass"
+					//	Grass shouldn't generate under water
+					if y == height && y > waterLevel {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Grass"}
+					} else if y <= height-5 {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
 					}
-
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: blockType}
 				} else {
-					// Bloco vazio
+					//	Air blocks need to be placed because water is only generated over Air blocks!!
+					//	Otherwise water wold be placed on the margins...
 					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 				}
 			}
@@ -78,6 +71,40 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
 	noiseValue := p.Noise2D(float64(position.X+float32(x))*perlinFrequency, float64(position.Z+float32(z))*perlinFrequency)
 	return int((noiseValue + 1.0) / 2.0 * float64(pkg.ChunkSize)) // Normalizes the noise value to [0, chunkSize]
+}
+
+// 3D perlin noise generation for cave systems
+func GenerateUndergroundChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
+	chunk := &pkg.Chunk{}
+
+	threshold := 0.1 // Minimum density to be solid
+
+	for x := 0; x < pkg.ChunkSize; x++ {
+		for y := 0; y < pkg.ChunkSize; y++ {
+			for z := 0; z < pkg.ChunkSize; z++ {
+				// Global coordinates
+				globalX := int(position.X) + x
+				globalY := int(position.Y) + y
+				globalZ := int(position.Z) + z
+
+				// 3D noise for density
+				noise := p.Noise3D(float64(globalX)*perlinFrequency, float64(globalY)*perlinFrequency, float64(globalZ)*perlinFrequency)
+
+				//	Threshold defines whether the voxel is solid
+				if noise > threshold {
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
+
+				} else {
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+				}
+			}
+		}
+	}
+
+	// Marks the chunk as outdated so that the mesh can be generated
+	chunk.IsOutdated = true
+
+	return chunk
 }
 
 /*

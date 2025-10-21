@@ -88,7 +88,7 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 		}
 		return
 	}
-	plantCount := rand.Intn(pkg.ChunkSize / 2)
+	plantCount := pkg.ChunkSize / 2
 
 	for i := 0; i < plantCount; i++ {
 		x := rand.Intn(pkg.ChunkSize)
@@ -96,13 +96,12 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 
 		// Iterate from the top to the bottom of the chunk to find the surface
 		for y := pkg.ChunkSize - 1; y >= 0; y-- {
+
 			// Ensure plants are only placed above layer 13 (water)
-			if !BlockTypes[chunk.Voxels[x][y][z].Type].IsSolid || y > pkg.ChunkSize && y < waterLevel {
-				break
-			}
-			// Randomly define a model for the plant
-			randomModel := rand.Intn(4) // 0 - 3
-			if y+1 < pkg.ChunkSize {
+			if chunk.Voxels[x][y][z].Type == "Grass" && y+1 < pkg.ChunkSize && chunk.Voxels[x][y+1][z].Type == "Air" && y > waterLevel {
+
+				// Randomly define a model for the plant
+				randomModel := rand.Intn(4) // 0 - 3
 				chunk.Voxels[x][y+1][z] = pkg.VoxelData{
 					Type:  "Plant",
 					Model: pkg.PlantModels[randomModel],
@@ -112,8 +111,8 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 					Position: plantPos,
 					ModelID:  randomModel,
 				})
+				break
 			}
-			break
 		}
 	}
 }

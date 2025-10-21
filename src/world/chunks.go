@@ -29,23 +29,27 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 	chunk, exists := cc.Chunks[position]
 	cc.CacheMutex.Unlock()
 
+	var newChunk *pkg.Chunk
+
 	if exists {
+		if int(position.Y) >= 0 {
+			newChunk = GenerateAbovegroundChunk(position, p, true)
+		} else {
+			newChunk = GenerateUndergroundChunk(position, p)
+		}
 		// Reuses plants from saved chunk
-		updatedChunk := GenerateAbovegroundChunk(position, p, true)
-		updatedChunk.Plants = chunk.Plants // Reassigns the old plants
-		updatedChunk.IsOutdated = true
-
-		cc.CacheMutex.Lock()
-		cc.Chunks[position] = updatedChunk
-		cc.CacheMutex.Unlock()
-
-		return updatedChunk
+		newChunk.Plants = chunk.Plants // Reassigns the old plants
+		newChunk.IsOutdated = true
+	} else {
+		if int(position.Y) >= 0 {
+			newChunk = GenerateAbovegroundChunk(position, p, false)
+		} else {
+			newChunk = GenerateUndergroundChunk(position, p)
+		}
 	}
 
-	chunk = GenerateAbovegroundChunk(position, p, false)
-
 	cc.CacheMutex.Lock()
-	cc.Chunks[position] = chunk
+	cc.Chunks[position] = newChunk
 	cc.CacheMutex.Unlock()
 
 	return chunk
@@ -91,6 +95,10 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for x := playerChunkX - pkg.ChunkDistance; x <= playerChunkX+pkg.ChunkDistance; x++ {
 		for z := playerChunkZ - pkg.ChunkDistance; z <= playerChunkZ+pkg.ChunkDistance; z++ {
 			for y := playerChunkY - pkg.ChunkDistance; y <= playerChunkY+pkg.ChunkDistance; y++ {
+				if y > 0 {
+					continue // Ignore chunks above the surface
+				}
+
 				chunkPosition := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
 				if _, exists := chunkCache.Chunks[chunkPosition]; !exists {
 					//fmt.Printf("Starting chunk loading in %v...\n", chunkPosition)
