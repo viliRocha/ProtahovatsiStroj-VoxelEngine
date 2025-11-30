@@ -77,7 +77,11 @@ func InitGame() Game {
 	chunkCache := world.NewChunkCache() // Initialize ChunkCache
 	shader := loadShader(camera, chunkCache)
 
-	chunkCache.Chunks[rl.NewVector3(0, 0, 0)] = world.GenerateAbovegroundChunk(rl.NewVector3(0, 0, 0), perlinNoise, false) // Passing perlinNoise
+	// Cria o primeiro chunk na origem
+	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
+	originPos := rl.NewVector3(0, 0, 0)
+
+	chunkCache.Active[originCoord] = world.GenerateTerrainChunk(originPos, perlinNoise, nil, false)
 
 	rl.SetTargetFPS(60)
 

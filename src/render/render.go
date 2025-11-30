@@ -22,15 +22,22 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
 	//projection := rl.MatrixPerspective(game.Camera.Fovy, float32(load.ScreenWidth)/float32(load.ScreenHeight), 0.01, 1000.0)
 
-	for chunkPosition, chunk := range game.ChunkCache.Chunks {
+	for coord, chunk := range game.ChunkCache.Active {
+		// Converte coordenada de chunk para posição real
+		chunkPos := rl.NewVector3(
+			float32(coord.X*pkg.ChunkSize),
+			float32(coord.Y*pkg.ChunkSize),
+			float32(coord.Z*pkg.ChunkSize),
+		)
+
 		// Build mesh only once if needed
 		if chunk.IsOutdated {
-			BuildChunkMesh(chunk, chunkPosition /*, game.LightPosition*/)
+			BuildChunkMesh(chunk, chunkPos /*, game.LightPosition*/)
 		}
 
 		// If the chunk has mesh, draw directly
 		if chunk.HasMesh && chunk.Model.MeshCount > 0 && chunk.Model.Meshes != nil {
-			rl.DrawModel(chunk.Model, chunkPosition, 1.0, rl.White)
+			rl.DrawModel(chunk.Model, chunkPos, 1.0, rl.White)
 		}
 
 		Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
@@ -49,9 +56,9 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 			}
 
 			voxelPosition := rl.NewVector3(
-				chunkPosition.X+float32(pos.X),
-				chunkPosition.Y+float32(pos.Y),
-				chunkPosition.Z+float32(pos.Z),
+				chunkPos.X+float32(pos.X),
+				chunkPos.Y+float32(pos.Y),
+				chunkPos.Z+float32(pos.Z),
 			)
 
 			/*

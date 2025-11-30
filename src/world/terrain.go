@@ -23,8 +23,26 @@ func chooseRandomTree() string {
 	}
 }
 
-func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants bool) *pkg.Chunk {
+func GenerateAerialChunk(position rl.Vector3) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
+
+	for x := 0; x < pkg.ChunkSize; x++ {
+		for y := 0; y < pkg.ChunkSize; y++ {
+			for z := 0; z < pkg.ChunkSize; z++ {
+				// Tudo é ar
+				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+			}
+		}
+	}
+
+	chunk.IsOutdated = true
+	return chunk
+}
+
+func GenerateTerrainChunk(position rl.Vector3, p *perlin.Perlin, oldPlants []pkg.PlantData, reusePlants bool) *pkg.Chunk {
+	chunk := &pkg.Chunk{
+		Plants: []pkg.PlantData{},
+	}
 
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 1
 
@@ -59,7 +77,7 @@ func GenerateAbovegroundChunk(position rl.Vector3, p *perlin.Perlin, reusePlants
 	}
 
 	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, reusePlants)
+	generatePlants(chunk, position, oldPlants, reusePlants)
 	generateTrees(chunk, chooseRandomTree())
 
 	// Marks the chunk as outdated so that the mesh can be generated

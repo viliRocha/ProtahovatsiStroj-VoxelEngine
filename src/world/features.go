@@ -69,17 +69,17 @@ var BlockTypes = map[string]BlockProperties{
 }
 
 // Generate vegetation at random surface positions
-func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
+func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool) {
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
-	if reusePlants {
-		fmt.Println("Reusing plants:", len(chunk.Plants))
-		for _, plant := range chunk.Plants {
-			x := mod(int(plant.Position.X), pkg.ChunkSize)
-			y := int(plant.Position.Y)
-			z := mod(int(plant.Position.Z), pkg.ChunkSize)
+	if reusePlants && oldPlants != nil {
+		fmt.Println("Reusing plants:", len(oldPlants))
+		for _, plant := range oldPlants {
+			localX := int(plant.Position.X) - int(chunkPos.X)
+			localY := int(plant.Position.Y)
+			localZ := int(plant.Position.Z) - int(chunkPos.Z)
 
-			chunk.Voxels[x][y][z] = pkg.VoxelData{
+			chunk.Voxels[localX][localY][localZ] = pkg.VoxelData{
 				Type:  "Plant",
 				Model: pkg.PlantModels[plant.ModelID],
 			}
@@ -115,10 +115,6 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, reusePlants bool) {
 			}
 		}
 	}
-}
-
-func mod(a, b int) int {
-	return (a%b + b) % b
 }
 
 func parseLSystemRule(ruleStr string) map[rune]string {
