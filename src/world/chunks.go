@@ -17,9 +17,10 @@ type ChunkCoord struct {
 }
 
 type ChunkCache struct {
-	Active      map[ChunkCoord]*pkg.Chunk      // chunks ativos
-	PlantsCache map[ChunkCoord][]pkg.PlantData // plantas persistentes por chunk
-	CacheMutex  sync.Mutex
+	Active      map[ChunkCoord]*pkg.Chunk      // active chunks
+	PlantsCache map[ChunkCoord][]pkg.PlantData // persistent plants by chunk
+	TreesCache  map[ChunkCoord][]pkg.TreeData
+	CacheMutex  sync.RWMutex
 }
 
 func NewChunkCache() *ChunkCache {
@@ -27,6 +28,7 @@ func NewChunkCache() *ChunkCache {
 	return &ChunkCache{
 		Active:      make(map[ChunkCoord]*pkg.Chunk),
 		PlantsCache: make(map[ChunkCoord][]pkg.PlantData),
+		TreesCache:  make(map[ChunkCoord][]pkg.TreeData),
 	}
 }
 
@@ -41,18 +43,19 @@ func ToChunkCoord(pos rl.Vector3) ChunkCoord {
 func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
 	coord := ToChunkCoord(position)
 
-	cc.CacheMutex.Lock()
+	cc.CacheMutex.RLock()
 	_, exists := cc.Active[coord]
 	oldPlants, hasPlants := cc.PlantsCache[coord]
-	cc.CacheMutex.Unlock()
+	oldTrees, hasTrees := cc.TreesCache[coord]
+	cc.CacheMutex.RUnlock()
 
 	var newChunk *pkg.Chunk
 
 	if exists {
 		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position)
+			newChunk = GenerateAerialChunk(position, cc)
 		} else if int(position.Y) == 0 {
-			newChunk = GenerateTerrainChunk(position, p, oldPlants, true)
+			newChunk = GenerateTerrainChunk(position, p, cc, oldPlants, true, oldTrees, true)
 		} else {
 			newChunk = GenerateUndergroundChunk(position, p)
 		}
@@ -60,17 +63,18 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 	} else {
 		// First time the chunk is generated
 		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position)
+			newChunk = GenerateAerialChunk(position, cc)
 		} else if int(position.Y) == 0 {
 			// If there are saved plants, reuse them; if not, create new ones
-			if hasPlants && len(oldPlants) > 0 {
-				newChunk = GenerateTerrainChunk(position, p, oldPlants, true)
+			if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
+				newChunk = GenerateTerrainChunk(position, p, cc, oldPlants, true, oldTrees, true)
 			} else {
-				newChunk = GenerateTerrainChunk(position, p, nil, false)
+				newChunk = GenerateTerrainChunk(position, p, cc, nil, false, nil, false)
 			}
 		} else {
 			newChunk = GenerateUndergroundChunk(position, p)
 		}
+		newChunk.IsOutdated = true
 	}
 
 	// Update caches
@@ -83,6 +87,13 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 		// Ensures key exists even if empty to avoid future nil checks
 		cc.PlantsCache[coord] = nil
 	}
+
+	if len(newChunk.Trees) > 0 {
+		cc.TreesCache[coord] = newChunk.Trees
+	} else if !hasTrees {
+		cc.TreesCache[coord] = nil
+	}
+
 	cc.CacheMutex.Unlock()
 
 	return newChunk
@@ -115,9 +126,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for cp := range chunkRequests {
-				//fmt.Printf("[%s] Loading chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
 				chunkCache.GetChunk(cp, p)
-				//fmt.Printf("[%s] Finished chunk in %v\n", time.Now().Format("15:04:05.000"), cp)
 			}
 			done <- struct{}{}
 		}()
@@ -134,9 +143,9 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 				chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
 				coord := ChunkCoord{X: x, Y: y, Z: z}
 
-				chunkCache.CacheMutex.Lock()
+				chunkCache.CacheMutex.RLock()
 				chunk, exists := chunkCache.Active[coord]
-				chunkCache.CacheMutex.Unlock()
+				chunkCache.CacheMutex.RUnlock()
 
 				if !exists || (chunk != nil && chunk.IsOutdated) {
 					chunkRequests <- chunkPos
@@ -162,9 +171,19 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 				Z: coord.Z + int(direction.Z),
 			}
 			if neighbor, exists := chunkCache.Active[neighborCoord]; exists {
-				chunk.Neighbors[i] = neighbor
+				if chunk.Neighbors[i] != neighbor {
+					// Update reference
+					chunk.Neighbors[i] = neighbor
+					// Mark both as outdated to rebuild the mesh (exposed/hidden faces are recalculated, fixing the 'holes' in the terrain)
+					chunk.IsOutdated = true
+					neighbor.IsOutdated = true
+				}
 			} else {
-				chunk.Neighbors[i] = nil
+				if chunk.Neighbors[i] != nil {
+					// Neighbor was removed → mark chunk as outdated
+					chunk.Neighbors[i] = nil
+					chunk.IsOutdated = true
+				}
 			}
 		}
 	}
@@ -172,6 +191,33 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 
 	// Remove chunks outside the range
 	chunkCache.CleanUp(playerPosition)
+}
+
+func setVoxelGlobal(chunkCache *ChunkCache, globalPos rl.Vector3, voxel pkg.VoxelData) {
+	coord := ToChunkCoord(globalPos)
+
+	// Protege leitura do mapa
+	chunkCache.CacheMutex.RLock()
+	chunk := chunkCache.Active[coord]
+	chunkCache.CacheMutex.RUnlock()
+
+	//	Neighboring chunk wasn't rendered yet
+	if chunk == nil {
+		return
+	}
+
+	localX := int(globalPos.X) - coord.X*pkg.ChunkSize
+	localY := int(globalPos.Y) - coord.Y*pkg.ChunkSize
+	localZ := int(globalPos.Z) - coord.Z*pkg.ChunkSize
+
+	if localX >= 0 && localX < pkg.ChunkSize &&
+		localY >= 0 && localY < pkg.ChunkSize &&
+		localZ >= 0 && localZ < pkg.ChunkSize {
+		// Protege escrita no array de voxels
+		chunkCache.CacheMutex.Lock()
+		chunk.Voxels[localX][localY][localZ] = voxel
+		chunkCache.CacheMutex.Unlock()
+	}
 }
 
 // Function to calculate the absolute value

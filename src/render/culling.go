@@ -1,7 +1,6 @@
 package render
 
 import (
-	"math/rand"
 	"unsafe"
 
 	"go-engine/src/pkg"
@@ -39,6 +38,13 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 			continue
 		}
 
+		c := block.Color
+		// Add color per block (RGBA) on a deterministic way (so it can be recalculated when a new chunk is created and still look the same)
+		colorModifier := uint8(
+			((pos.X*73856093 + pos.Y*19349663) ^
+				(pos.Z*83492791 + pos.X*19349663) ^
+				(pos.Y*83492791 + pos.Z*73856093)) % 8)
+
 		for face := 0; face < 6; face++ {
 			if !shouldDrawFace(chunk, pos, face) && voxel.Type != "Leaves" {
 				continue
@@ -63,10 +69,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 					float32(pos.Z)+v[2],
 				)
 
-				c := block.Color
-				// Add color per vertex (RGBA)
-				colorModifier := uint8(rand.Intn(8)) //uint8(y * 20)
-
+				//	Add variety to blocks
 				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
 			}
 
@@ -110,29 +113,34 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 }
 
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
-	direction, max_size, max_height :=
-		pkg.FaceDirections[faceIndex], int(pkg.ChunkSize-1), int(pkg.ChunkSize)-1
-
-	var vX bool
-	var vY bool
-	var vZ bool
+	direction := pkg.FaceDirections[faceIndex]
+	maxSize := int(pkg.ChunkSize - 1)
+	maxHeight := int(pkg.ChunkSize) - 1
 
 	// Calculates the new coordinates based on the face direction
-	pos.X, vX = pkg.Transform(int(pos.X+int(direction.X)), 0, max_size)
-	pos.Y, vY = pkg.Transform(int(pos.Y+int(direction.Y)), 0, max_height)
-	pos.Z, vZ = pkg.Transform(int(pos.Z+int(direction.Z)), 0, max_size)
+	nx := pos.X + int(direction.X)
+	ny := pos.Y + int(direction.Y)
+	nz := pos.Z + int(direction.Z)
 
 	// Checks if the new coordinates are within the chunk bounds
-	if vX && vY && vZ {
-		voxel_type := chunk.Voxels[pos.X][pos.Y][pos.Z].Type
-		return !world.BlockTypes[voxel_type].IsSolid
+	if nx >= 0 && nx <= maxSize &&
+		ny >= 0 && ny <= maxHeight &&
+		nz >= 0 && nz <= maxSize {
+		voxelType := chunk.Voxels[nx][ny][nz].Type
+		return !world.BlockTypes[voxelType].IsSolid
 	}
 
-	neighbor_index := chunk.Neighbors[faceIndex]
-
-	if neighbor_index == nil {
-		return false
+	// Outside chunk boundries → depends on the neighbor
+	neighbor := chunk.Neighbors[faceIndex]
+	if neighbor == nil {
+		return true // no neighbor → exposed face
 	}
 
-	return !world.BlockTypes[neighbor_index.Voxels[pos.X][pos.Y][pos.Z].Type].IsSolid
+	// Adjusts coordinates relative to the neighbor.
+	nx = (nx + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
+	ny = (ny + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
+	nz = (nz + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
+
+	voxelType := neighbor.Voxels[nx][ny][nz].Type
+	return !world.BlockTypes[voxelType].IsSolid
 }

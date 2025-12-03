@@ -81,7 +81,7 @@ func InitGame() Game {
 	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
-	chunkCache.Active[originCoord] = world.GenerateTerrainChunk(originPos, perlinNoise, nil, false)
+	chunkCache.Active[originCoord] = world.GenerateTerrainChunk(originPos, perlinNoise, chunkCache, nil, false, nil, false)
 
 	rl.SetTargetFPS(60)
 

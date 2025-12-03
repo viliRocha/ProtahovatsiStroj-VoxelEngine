@@ -24,16 +24,29 @@ type PlantData struct {
 	ModelID  int
 }
 
+type TreeData struct {
+	Position     rl.Vector3
+	StructureStr string
+}
+
 type Chunk struct {
 	//Materials rl.Material
 	Voxels    [ChunkSize][ChunkSize][ChunkSize]VoxelData
 	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
 	Plants    []PlantData
+	Trees     []TreeData
 
 	Mesh       rl.Mesh
 	Model      rl.Model
-	IsOutdated bool // Flag to know if you need to update the mesh
-	HasMesh    bool // Flag to know if the mesh has already been created
+	Faces      []FaceData // List of built faces
+	IsOutdated bool       // Flag to know if you need to update the mesh
+	HasMesh    bool       // Flag to know if the mesh has already been created
+}
+
+type FaceData struct {
+	Position Coords
+	Normal   rl.Vector3
+	Color    rl.Color
 }
 
 type Coords struct {
@@ -137,14 +150,4 @@ func GetFaceGeometry(faceIndex int, x, y, z float32) ([]rl.Vector3, []rl.Vector3
 	}
 
 	return vertices, normals, texcoords
-}
-
-func Transform(val, min, max int) (int, bool) {
-	if val < min {
-		return max, false
-	}
-	if val > max {
-		return min, false
-	}
-	return val, true
 }

@@ -142,14 +142,13 @@ func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 	return result
 }
 
-func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
+func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string) {
 	stack := []rl.Vector3{position} // Array to hold both position and direction
 	currentPos := position
 	direction := rl.Vector3{0, 1, 0} //	Initial direction (upwards)
 
 	// Variables to Extend Angular Spacing
 	angleIncrement := 45.0 * (1.0 + rand.Float64()*0.2) // Initial separation angle between branches
-
 	currentAngle := 0.0
 
 	for i := 0; i < len(treeStructure); i++ {
@@ -157,16 +156,8 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 		switch char {
 		case 'F': // Create wood blocks for tree tunks
-			//	Gurantee values are within bounds
-			PosY := int(currentPos.Y)
-			PosX := int(currentPos.X)
-			PosZ := int(currentPos.Z)
+			setVoxelGlobal(chunkCache, currentPos, pkg.VoxelData{Type: "Wood"})
 
-			if PosX >= 0 && PosX < int(pkg.ChunkSize) &&
-				PosY >= 0 && PosY < int(pkg.ChunkSize) &&
-				PosZ >= 0 && PosZ < int(pkg.ChunkSize) {
-				chunk.Voxels[PosX][PosY][PosZ] = pkg.VoxelData{Type: "Wood"}
-			}
 			// Moving in the current direction
 			currentPos = rl.Vector3{
 				currentPos.X + direction.X,
@@ -218,21 +209,18 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 								float32(math.Sin(radians)),
 							}
 
-							pos := pkg.Coords{
-								int(currentPos.X + newDir.X),
-								int(currentPos.Y + newDir.Y),
-								int(currentPos.Z + newDir.Z),
+							newPos := rl.Vector3{
+								currentPos.X + newDir.X,
+								currentPos.Y + newDir.Y,
+								currentPos.Z + newDir.Z,
 							}
 
-							// Ensures that the blocks position is within bounds
-							if pos.X >= 0 && pos.X < pkg.ChunkSize &&
-								pos.Y >= 0 && pos.Y < int(pkg.ChunkSize) &&
-								pos.Z >= 0 && pos.Z < pkg.ChunkSize {
-								chunk.Voxels[pos.X][pos.Y][pos.Z] = pkg.VoxelData{Type: "Wood"}
-							}
-							currentPos = rl.Vector3{float32(pos.X), float32(pos.Y), float32(pos.Z)}
+							setVoxelGlobal(chunkCache, newPos, pkg.VoxelData{Type: "Wood"})
+
+							currentPos = newPos
 							// Increases the angle to open the next branch
 							currentAngle += angleIncrement
+
 						}
 					}
 					// Updates the index to continue after
@@ -246,23 +234,30 @@ func placeTree(chunk *pkg.Chunk, position rl.Vector3, treeStructure string) {
 
 			for i := range numLeaves {
 				angle := float64(i) * (2 * math.Pi / float64(numLeaves)) // Calculate leaf cluster angle
-				mCos := float32(radius * math.Cos(angle))
 
 				// "l": leafPos
-				lx := int(currentPos.X + mCos)
-				ly := int(currentPos.Y + mCos)
-				lz := int(currentPos.Z + float32(radius*math.Sin(angle)))
+				lx := currentPos.X + float32(radius*math.Cos(angle))
+				ly := currentPos.Y + float32(rand.Intn(2)) // variação vertical)
+				lz := currentPos.Z + float32(radius*math.Sin(angle))
 
-				if lx >= 0 && lx < pkg.ChunkSize && ly >= 0 && ly < int(pkg.ChunkSize) && lz >= 0 && lz < pkg.ChunkSize {
-					chunk.Voxels[lx][ly][lz] = pkg.VoxelData{Type: "Leaves"}
-				}
+				leafPos := rl.Vector3{lx, ly, lz}
+				setVoxelGlobal(chunkCache, leafPos, pkg.VoxelData{Type: "Leaves"})
 			}
 		}
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+
+	if reuseTrees && oldTrees != nil {
+		fmt.Println("Reusing trees:", len(oldTrees))
+		for _, tree := range oldTrees {
+			placeTree(chunkCache, tree.Position, tree.StructureStr)
+			chunk.Trees = append(chunk.Trees, tree)
+		}
+		return
+	}
 
 	rules := parseLSystemRule(lsystemRule)
 	treeStructure := applyLSystem("F", rules, 2)
@@ -289,7 +284,12 @@ func generateTrees(chunk *pkg.Chunk, lsystemRule string) {
 		treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
 
 		// Build the tree with the generated structure
-		placeTree(chunk, treePos, treeStructure)
+		placeTree(chunkCache, treePos, treeStructure)
+
+		chunk.Trees = append(chunk.Trees, pkg.TreeData{
+			Position:     treePos,
+			StructureStr: treeStructure,
+		})
 	}
 }
 

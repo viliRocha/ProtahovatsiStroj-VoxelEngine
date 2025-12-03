@@ -33,6 +33,8 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 		// Build mesh only once if needed
 		if chunk.IsOutdated {
 			BuildChunkMesh(chunk, chunkPos /*, game.LightPosition*/)
+			chunk.IsOutdated = false // reset flag → do not rebuild each frame
+			chunk.HasMesh = true     // note that already has ready-made fabric
 		}
 
 		// If the chunk has mesh, draw directly

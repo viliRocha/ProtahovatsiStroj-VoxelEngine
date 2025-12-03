@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.9.8
+### v0.10.2
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**

@@ -23,25 +23,44 @@ func chooseRandomTree() string {
 	}
 }
 
-func GenerateAerialChunk(position rl.Vector3) *pkg.Chunk {
+func GenerateAerialChunk(position rl.Vector3, chunkCache *ChunkCache) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
 
+	//	Every single block is air
 	for x := 0; x < pkg.ChunkSize; x++ {
 		for y := 0; y < pkg.ChunkSize; y++ {
 			for z := 0; z < pkg.ChunkSize; z++ {
-				// Tudo é ar
 				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 			}
 		}
 	}
 
+	/*
+		// Verifica o chunk abaixo
+		belowCoord := ToChunkCoord(rl.NewVector3(position.X, position.Y-1, position.Z))
+		belowChunk := chunkCache.Active[belowCoord]
+
+		if belowChunk != nil {
+			// Para cada árvore do chunk abaixo
+			for _, tree := range belowChunk.Trees {
+				// Reaplica a estrutura da árvore no chunk aéreo
+				// Só voxels cuja Y cai dentro da faixa do chunk aéreo
+				treeTopPos := tree.Position
+				// Aqui você pode reaplicar a mesma lógica de placeTree,
+				// mas filtrando apenas blocos com Y >= posição.Y*ChunkSize
+				placeTree(chunkCache, treeTopPos, tree.StructureStr)
+			}
+		}
+	*/
+
 	chunk.IsOutdated = true
 	return chunk
 }
 
-func GenerateTerrainChunk(position rl.Vector3, p *perlin.Perlin, oldPlants []pkg.PlantData, reusePlants bool) *pkg.Chunk {
+func GenerateTerrainChunk(position rl.Vector3, p *perlin.Perlin, chunkCache *ChunkCache, oldPlants []pkg.PlantData, reusePlants bool, oldTrees []pkg.TreeData, reuseTrees bool) *pkg.Chunk {
 	chunk := &pkg.Chunk{
 		Plants: []pkg.PlantData{},
+		Trees:  []pkg.TreeData{},
 	}
 
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 1
@@ -78,7 +97,7 @@ func GenerateTerrainChunk(position rl.Vector3, p *perlin.Perlin, oldPlants []pkg
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, oldPlants, reusePlants)
-	generateTrees(chunk, chooseRandomTree())
+	generateTrees(chunk, chunkCache, chooseRandomTree(), oldTrees, reuseTrees)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true
