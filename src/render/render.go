@@ -72,6 +72,14 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 			case "Plant":
 				rl.DrawModel(voxel.Model, voxelPosition, 0.4, rl.White)
 			case "Water":
+				// only draws if the voxel above is not water
+				if pos.Y+1 < pkg.ChunkSize {
+					above := chunk.Voxels[pos.X][pos.Y+1][pos.Z]
+					if above.Type == "Water" {
+						continue // do not draw an internal plane
+					}
+				}
+
 				voxelPosition.X += 0.5
 				voxelPosition.Y += 0.5
 				voxelPosition.Z += 0.5
@@ -92,9 +100,32 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 	}
 }
 
-func RenderGame(game *load.Game) {
+func applyUnderwaterEffect(game *load.Game) {
 	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
 
+	coord := world.ToChunkCoord(game.Camera.Position)
+	chunk := game.ChunkCache.Active[coord]
+
+	if chunk != nil {
+		localX := int(game.Camera.Position.X) - coord.X*pkg.ChunkSize
+		localY := int(game.Camera.Position.Y) - coord.Y*pkg.ChunkSize
+		localZ := int(game.Camera.Position.Z) - coord.Z*pkg.ChunkSize
+
+		if localX >= 0 && localX < pkg.ChunkSize &&
+			localY >= 0 && localY < pkg.ChunkSize &&
+			localZ >= 0 && localZ < pkg.ChunkSize {
+
+			voxel := chunk.Voxels[localX][localY][localZ]
+			if voxel.Type == "Water" && game.Camera.Position.Y < float32(waterLevel)-0.5 {
+				// apply blue overlay
+				rl.SetBlendMode(rl.BlendMode(0))
+				rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
+			}
+		}
+	}
+}
+
+func RenderGame(game *load.Game) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.NewColor(150, 208, 233, 255)) //   Light blue
 
@@ -111,11 +142,7 @@ func RenderGame(game *load.Game) {
 
 	rl.EndMode3D()
 
-	// Apply light blue filter - for underwater
-	if game.Camera.Position.Y < float32(waterLevel)-0.5 {
-		rl.SetBlendMode(rl.BlendMode(0))
-		rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.NewColor(0, 0, 255, 100))
-	}
+	applyUnderwaterEffect(game)
 
 	// Draw debug text
 	rl.DrawFPS(10, 30)

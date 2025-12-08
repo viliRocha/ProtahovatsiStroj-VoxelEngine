@@ -305,13 +305,19 @@ func genWaterFormations(chunk *pkg.Chunk) {
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {
-			//	Water shouldn't replace solid blocks (go through them)
-			if chunk.Voxels[x][waterLevel][z].Type != "Air" {
-				continue
-			}
-			chunk.Voxels[x][waterLevel][z] = pkg.VoxelData{Type: "Water"}
+			topWaterY := waterLevel
 
-			for y := range pkg.ChunkSize {
+			for y := waterLevel; y >= 0; y-- {
+				if chunk.Voxels[x][y][z].Type == "Air" {
+					//	Water shouldn't replace solid blocks (go through them)
+					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Water"}
+				} else {
+					break // meets ground → stops
+				}
+			}
+
+			// Only generates sand near the water's surface
+			for y := topWaterY - 2; y <= topWaterY+1; y++ {
 				// Checks adjacent blocks for generating sand
 				for dy := -3; dy <= 1; dy++ {
 					for dx := -3; dx <= 3; dx++ {

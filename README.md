@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.10.2
+### v0.10.6
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -21,7 +21,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 ## Screenshots 🖼️
 <img src="./img/lighting2.png" alt="light" width="1000px">
 <img src="./img/landscape9.png" alt="world_gen" width="1000px">
-<img src="./img/landscape6.png" alt="world_gen" width="1000px">
+<img src="./img/landscape10.png" alt="world_gen" width="1000px">
 
 ## Getting Started 🚀
 To get started with the voxel engine, clone the repository and open the folder. Make sure you have Go installed on your device. Then, run the command `go mod tidy` and finally, to compile the project, run `go run ./src`.

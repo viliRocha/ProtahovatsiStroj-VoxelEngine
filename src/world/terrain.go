@@ -92,8 +92,8 @@ func GenerateUndergroundChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk 
 	threshold := 0.1 // Minimum density to be solid
 
 	for x := 0; x < pkg.ChunkSize; x++ {
-		for y := 0; y < pkg.ChunkSize; y++ {
-			for z := 0; z < pkg.ChunkSize; z++ {
+		for z := 0; z < pkg.ChunkSize; z++ {
+			for y := 0; y < pkg.ChunkSize; y++ {
 				// Global coordinates
 				globalX := int(position.X) + x
 				globalY := int(position.Y) + y
