@@ -19,7 +19,7 @@ func chooseRandomTree() string {
 	case model < 2:
 		return "F=F[A(3)L]F[-A(2)L]F[/A(2)L]F[+A(1)L]"
 	default:
-		return "F=FFF[FA(3)L][FA(3)L][FA(3)L]"
+		return "F=FFF[FA(2)L][FA(3)L][FA(4)L]"
 	}
 }
 
@@ -27,31 +27,6 @@ func GenerateAerialChunk(position rl.Vector3, chunkCache *ChunkCache) *pkg.Chunk
 	chunk := &pkg.Chunk{}
 
 	//	Every single block is air
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for y := 0; y < pkg.ChunkSize; y++ {
-			for z := 0; z < pkg.ChunkSize; z++ {
-				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
-			}
-		}
-	}
-
-	/*
-		// Verifica o chunk abaixo
-		belowCoord := ToChunkCoord(rl.NewVector3(position.X, position.Y-1, position.Z))
-		belowChunk := chunkCache.Active[belowCoord]
-
-		if belowChunk != nil {
-			// Para cada árvore do chunk abaixo
-			for _, tree := range belowChunk.Trees {
-				// Reaplica a estrutura da árvore no chunk aéreo
-				// Só voxels cuja Y cai dentro da faixa do chunk aéreo
-				treeTopPos := tree.Position
-				// Aqui você pode reaplicar a mesma lógica de placeTree,
-				// mas filtrando apenas blocos com Y >= posição.Y*ChunkSize
-				placeTree(chunkCache, treeTopPos, tree.StructureStr)
-			}
-		}
-	*/
 
 	chunk.IsOutdated = true
 	return chunk
@@ -97,7 +72,7 @@ func GenerateTerrainChunk(position rl.Vector3, p *perlin.Perlin, chunkCache *Chu
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, oldPlants, reusePlants)
-	generateTrees(chunk, chunkCache, chooseRandomTree(), oldTrees, reuseTrees)
+	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true

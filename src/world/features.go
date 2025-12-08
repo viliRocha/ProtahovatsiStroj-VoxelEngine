@@ -247,7 +247,7 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
@@ -281,13 +281,17 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, lsystemRule string,
 		if surfaceY < waterLevel {
 			continue
 		}
-		treePos := rl.NewVector3(float32(x), float32(surfaceY+1), float32(z))
+		treePosGlobal := rl.NewVector3(
+			chunkOrigin.X+float32(x),
+			chunkOrigin.Y+float32(surfaceY+1),
+			chunkOrigin.Z+float32(z),
+		)
 
 		// Build the tree with the generated structure
-		placeTree(chunkCache, treePos, treeStructure)
+		placeTree(chunkCache, treePosGlobal, treeStructure)
 
 		chunk.Trees = append(chunk.Trees, pkg.TreeData{
-			Position:     treePos,
+			Position:     treePosGlobal,
 			StructureStr: treeStructure,
 		})
 	}

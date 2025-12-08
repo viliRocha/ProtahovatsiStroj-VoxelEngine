@@ -1,6 +1,7 @@
 package world
 
 import (
+	"math"
 	"runtime"
 	"sync"
 
@@ -16,27 +17,34 @@ type ChunkCoord struct {
 	X, Y, Z int
 }
 
+type PendingWrite struct {
+	Pos   [3]int
+	Voxel pkg.VoxelData
+}
+
 type ChunkCache struct {
-	Active      map[ChunkCoord]*pkg.Chunk      // active chunks
-	PlantsCache map[ChunkCoord][]pkg.PlantData // persistent plants by chunk
-	TreesCache  map[ChunkCoord][]pkg.TreeData
-	CacheMutex  sync.RWMutex
+	Active        map[ChunkCoord]*pkg.Chunk      // active chunks
+	PlantsCache   map[ChunkCoord][]pkg.PlantData // persistent plants by chunk
+	TreesCache    map[ChunkCoord][]pkg.TreeData
+	PendingVoxels map[ChunkCoord][]PendingWrite
+	CacheMutex    sync.RWMutex
 }
 
 func NewChunkCache() *ChunkCache {
 	// Creates a hash map to store voxel data
 	return &ChunkCache{
-		Active:      make(map[ChunkCoord]*pkg.Chunk),
-		PlantsCache: make(map[ChunkCoord][]pkg.PlantData),
-		TreesCache:  make(map[ChunkCoord][]pkg.TreeData),
+		Active:        make(map[ChunkCoord]*pkg.Chunk),
+		PlantsCache:   make(map[ChunkCoord][]pkg.PlantData),
+		TreesCache:    make(map[ChunkCoord][]pkg.TreeData),
+		PendingVoxels: make(map[ChunkCoord][]PendingWrite),
 	}
 }
 
 func ToChunkCoord(pos rl.Vector3) ChunkCoord {
 	return ChunkCoord{
-		X: int(pos.X) / pkg.ChunkSize,
-		Y: int(pos.Y) / pkg.ChunkSize,
-		Z: int(pos.Z) / pkg.ChunkSize,
+		X: int(math.Floor(float64(pos.X) / float64(pkg.ChunkSize))),
+		Y: int(math.Floor(float64(pos.Y) / float64(pkg.ChunkSize))),
+		Z: int(math.Floor(float64(pos.Z) / float64(pkg.ChunkSize))),
 	}
 }
 
@@ -80,6 +88,15 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 	// Update caches
 	cc.CacheMutex.Lock()
 	cc.Active[coord] = newChunk
+	// applies pending issues after the core terrain generation so tree voxels aren’t overwritten.
+	if writes, ok := cc.PendingVoxels[coord]; ok {
+		for _, w := range writes {
+			newChunk.Voxels[w.Pos[0]][w.Pos[1]][w.Pos[2]] = w.Voxel
+		}
+		newChunk.IsOutdated = true
+		delete(cc.PendingVoxels, coord)
+	}
+
 	if len(newChunk.Plants) > 0 {
 		// Always save when generating/rebuilding
 		cc.PlantsCache[coord] = newChunk.Plants
@@ -136,18 +153,23 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for x := playerCoord.X - pkg.ChunkDistance; x <= playerCoord.X+pkg.ChunkDistance; x++ {
 		for z := playerCoord.Z - pkg.ChunkDistance; z <= playerCoord.Z+pkg.ChunkDistance; z++ {
 			for y := playerCoord.Y - pkg.ChunkDistance; y <= playerCoord.Y+pkg.ChunkDistance; y++ {
-				if y > 0 {
-					continue // Ignore chunks above the surface
-				}
 
-				chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
 				coord := ChunkCoord{X: x, Y: y, Z: z}
 
+				// Allow aerial chunks to load if there are pending writes for them
 				chunkCache.CacheMutex.RLock()
+				hasPending := len(chunkCache.PendingVoxels[coord]) > 0
 				chunk, exists := chunkCache.Active[coord]
 				chunkCache.CacheMutex.RUnlock()
 
+				//	Generate the top of tall trees that reach the aerial chunks
+				if y > 0 && !hasPending {
+					continue
+				}
+
 				if !exists || (chunk != nil && chunk.IsOutdated) {
+					chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
+
 					chunkRequests <- chunkPos
 				}
 			}
@@ -196,28 +218,37 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 func setVoxelGlobal(chunkCache *ChunkCache, globalPos rl.Vector3, voxel pkg.VoxelData) {
 	coord := ToChunkCoord(globalPos)
 
-	// Protege leitura do mapa
+	// Protect map reading
 	chunkCache.CacheMutex.RLock()
 	chunk := chunkCache.Active[coord]
 	chunkCache.CacheMutex.RUnlock()
 
-	//	Neighboring chunk wasn't rendered yet
-	if chunk == nil {
+	// math.Floor prevents inconsistent rounding that throws blocks into the wrong chunk
+	localX := int(math.Floor(float64(globalPos.X))) - coord.X*pkg.ChunkSize
+	localY := int(math.Floor(float64(globalPos.Y))) - coord.Y*pkg.ChunkSize
+	localZ := int(math.Floor(float64(globalPos.Z))) - coord.Z*pkg.ChunkSize
+
+	if localX < 0 && localX >= pkg.ChunkSize &&
+		localY < 0 && localY >= pkg.ChunkSize &&
+		localZ < 0 && localZ >= pkg.ChunkSize {
 		return
 	}
 
-	localX := int(globalPos.X) - coord.X*pkg.ChunkSize
-	localY := int(globalPos.Y) - coord.Y*pkg.ChunkSize
-	localZ := int(globalPos.Z) - coord.Z*pkg.ChunkSize
-
-	if localX >= 0 && localX < pkg.ChunkSize &&
-		localY >= 0 && localY < pkg.ChunkSize &&
-		localZ >= 0 && localZ < pkg.ChunkSize {
-		// Protege escrita no array de voxels
+	if chunk == nil {
 		chunkCache.CacheMutex.Lock()
-		chunk.Voxels[localX][localY][localZ] = voxel
+		chunkCache.PendingVoxels[coord] = append(chunkCache.PendingVoxels[coord], PendingWrite{
+			Pos:   [3]int{localX, localY, localZ},
+			Voxel: voxel,
+		})
 		chunkCache.CacheMutex.Unlock()
+		return
 	}
+
+	// if multiple goroutines write to the same chunk, consider a mutex per chunk
+	chunkCache.CacheMutex.Lock()
+	chunk.Voxels[localX][localY][localZ] = voxel
+	chunk.IsOutdated = true
+	chunkCache.CacheMutex.Unlock()
 }
 
 // Function to calculate the absolute value
