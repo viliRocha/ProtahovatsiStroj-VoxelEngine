@@ -9,6 +9,32 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+// Função auxiliar: calcula fator de occlusion para um vértice
+func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) float32 {
+	// Cada vértice da face tem 3 vizinhos potenciais (duas arestas + um diagonal)
+	// Se todos são sólidos, o vértice fica mais escuro.
+	offsets := pkg.VertexAOOffsets[face][corner] // tabela de offsets (dx,dy,dz) para cada vizinho
+	occlusion := 0
+	for _, off := range offsets {
+		nx := pos.X + off[0]
+		ny := pos.Y + off[1]
+		nz := pos.Z + off[2]
+		if nx >= 0 && nx < pkg.ChunkSize &&
+			ny >= 0 && ny < pkg.ChunkSize &&
+			nz >= 0 && nz < pkg.ChunkSize {
+			if world.BlockTypes[chunk.Voxels[nx][ny][nz].Type].IsSolid {
+				occlusion++
+			}
+		} else {
+			// fora do chunk → trata como sólido para não deixar borda clara demais
+			occlusion++
+		}
+	}
+
+	// Normaliza: 0 vizinhos sólidos = claro, 3 vizinhos sólidos = escuro
+	return 0.5 + 0.5*(1.0-float32(occlusion)/3.0)
+}
+
 func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.Vector3*/) {
 	var vertices []float32
 	var indices []uint16
@@ -61,15 +87,25 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 				voxelColor := applyLighting(block.Color, lightIntensity)
 			*/
 
-			for i := 0; i < 4; i++ {
-				v := pkg.FaceVertices[face][i]
+			for vertice := 0; vertice < 4; vertice++ {
+				v := pkg.FaceVertices[face][vertice]
 				vertices = append(vertices,
 					float32(pos.X)+v[0],
 					float32(pos.Y)+v[1],
 					float32(pos.Z)+v[2],
 				)
 
-				//	Add variety to blocks
+				/*
+					// Add variety and basic shading to blocks
+					ao := calculateVoxelAO(chunk, pos, face, vertice)
+					colors = append(colors,
+						uint8(float32(c.R+colorModifier)*ao),
+						uint8(float32(c.G+colorModifier)*ao),
+						uint8(float32(c.B+colorModifier)*ao),
+						c.A,
+					)
+				*/
+
 				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
 			}
 
@@ -96,6 +132,12 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 	if len(colors) > 0 {
 		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
 	}
+	/*
+		if len(aoValues) > 0 {
+			// envia AO como "Texcoords" (cada vértice recebe um valor)
+			mesh.Texcoords = (*float32)(unsafe.Pointer(&aoValues[0]))
+		}
+	*/
 
 	rl.UploadMesh(&mesh, false)
 	model := rl.LoadModelFromMesh(mesh)

@@ -7,7 +7,7 @@ A voxel engine built using **raylib-go** and **OpenGL**
 ##  Features 🌟
 - **Infinite Random World Generation**: Utilizes a Perlin noise algorithm for creating expansive landscapes.
 - **Water Formations**: Realistic water bodies.
-- **Surface Feature System**: Precedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
+- **Surface Feature System**: Procedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
 - **Cave Generation**: Intricate cave systems made using 3D perlin noise.
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
