@@ -16,7 +16,7 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 	}
 
 	view := rl.GetCameraMatrix(game.Camera)
-	projection := rl.GetCameraMatrix(game.Camera)
+	projection := rl.GetMatrixProjection()
 
 	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
 	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
@@ -90,6 +90,8 @@ func RenderVoxels(game *load.Game, is_transparent bool) {
 				   modelMatrix := rl.MatrixTranslate(voxelPosition.X, voxelPosition.Y, voxelPosition.Z)
 				   rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_model"), modelMatrix)
 				*/
+			case "Cloud":
+				rl.DrawCube(voxelPosition, 1.0, 0.0, 1.0, world.BlockTypes[voxel.Type].Color)
 			}
 		}
 	}

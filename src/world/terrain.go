@@ -23,10 +23,29 @@ func chooseRandomTree() string {
 	}
 }
 
-func GenerateAerialChunk(position rl.Vector3, chunkCache *ChunkCache) *pkg.Chunk {
+func GenerateAerialChunk(position rl.Vector3, p *perlin.Perlin, chunkCache *ChunkCache) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
 
-	//	Every single block is air
+	localY := 15     // altura fixa das nuvens
+	threshold := 0.1 // limiar para formar nuvem
+	cloudFrequency := 0.07
+
+	// It only generates clouds if this is the first aerial chunk
+	if int(position.Y) == pkg.ChunkSize {
+		for x := 0; x < pkg.ChunkSize; x++ {
+			for z := 0; z < pkg.ChunkSize; z++ {
+				// Global coordinates
+				globalX := int(position.X) + x
+				globalZ := int(position.Z) + z
+
+				noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
+
+				if noise > threshold {
+					chunk.Voxels[x][localY][z] = pkg.VoxelData{Type: "Cloud"}
+				}
+			}
+		}
+	}
 
 	chunk.IsOutdated = true
 	return chunk

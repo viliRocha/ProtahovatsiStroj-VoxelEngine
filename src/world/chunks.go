@@ -61,17 +61,18 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 
 	if exists {
 		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position, cc)
+			newChunk = GenerateAerialChunk(position, p, cc)
 		} else if int(position.Y) == 0 {
 			newChunk = GenerateTerrainChunk(position, p, cc, oldPlants, true, oldTrees, true)
 		} else {
-			newChunk = GenerateUndergroundChunk(position, p)
+			//newChunk = GenerateUndergroundChunk(position, p)
+			newChunk = GenerateAerialChunk(position, p, cc)
 		}
 		newChunk.IsOutdated = true // reset flag after reconstruction --> ensures that the mesh is rebuilt and the plant voxels are reapplied
 	} else {
 		// First time the chunk is generated
 		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position, cc)
+			newChunk = GenerateAerialChunk(position, p, cc)
 		} else if int(position.Y) == 0 {
 			// If there are saved plants, reuse them; if not, create new ones
 			if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
@@ -80,7 +81,8 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 				newChunk = GenerateTerrainChunk(position, p, cc, nil, false, nil, false)
 			}
 		} else {
-			newChunk = GenerateUndergroundChunk(position, p)
+			//newChunk = GenerateUndergroundChunk(position, p)
+			newChunk = GenerateAerialChunk(position, p, cc)
 		}
 		newChunk.IsOutdated = true
 	}
@@ -153,19 +155,12 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for x := playerCoord.X - pkg.ChunkDistance; x <= playerCoord.X+pkg.ChunkDistance; x++ {
 		for z := playerCoord.Z - pkg.ChunkDistance; z <= playerCoord.Z+pkg.ChunkDistance; z++ {
 			for y := playerCoord.Y - pkg.ChunkDistance; y <= playerCoord.Y+pkg.ChunkDistance; y++ {
-
 				coord := ChunkCoord{X: x, Y: y, Z: z}
 
 				// Allow aerial chunks to load if there are pending writes for them
 				chunkCache.CacheMutex.RLock()
-				hasPending := len(chunkCache.PendingVoxels[coord]) > 0
 				chunk, exists := chunkCache.Active[coord]
 				chunkCache.CacheMutex.RUnlock()
-
-				//	Generate the top of tall trees that reach the aerial chunks
-				if y > 0 && !hasPending {
-					continue
-				}
 
 				if !exists || (chunk != nil && chunk.IsOutdated) {
 					chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))

@@ -1,10 +1,9 @@
 package render
 
 import (
-	"unsafe"
-
 	"go-engine/src/pkg"
 	"go-engine/src/world"
+	"unsafe"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -32,7 +31,16 @@ func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) fl
 	}
 
 	// Normaliza: 0 vizinhos sólidos = claro, 3 vizinhos sólidos = escuro
-	return 0.5 + 0.5*(1.0-float32(occlusion)/3.0)
+	return 0.7 + 0.5*(1.0-float32(occlusion)/3.0)
+}
+
+func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
+	total := 0.0
+	for corner := 0; corner < 4; corner++ {
+		total += float64(calculateVoxelAO(chunk, pos, face, corner))
+	}
+	// média dos 4 cantos
+	return float32(total / 4.0)
 }
 
 func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.Vector3*/) {
@@ -49,6 +57,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 	 * https://teotl.dev/vischunk/ (may be useful)
 	 * (AI was used to help the interpretation of some of those docs)
 	 */
+
 	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
 	for i := 0; i < Nx*Ny*Nz; i++ {
 		pos := pkg.Coords{
@@ -60,7 +69,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 		voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
 		block := world.BlockTypes[voxel.Type]
 
-		if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" {
+		if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" || voxel.Type == "Cloud" {
 			continue
 		}
 
@@ -87,6 +96,8 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 				voxelColor := applyLighting(block.Color, lightIntensity)
 			*/
 
+			//ao := calculateFaceAO(chunk, pos, face)
+
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
 				vertices = append(vertices,
@@ -96,8 +107,6 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 				)
 
 				/*
-					// Add variety and basic shading to blocks
-					ao := calculateVoxelAO(chunk, pos, face, vertice)
 					colors = append(colors,
 						uint8(float32(c.R+colorModifier)*ao),
 						uint8(float32(c.G+colorModifier)*ao),

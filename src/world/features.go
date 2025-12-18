@@ -61,6 +61,11 @@ var BlockTypes = map[string]BlockProperties{
 		IsSolid:   false,
 		IsVisible: true,
 	},
+	"Cloud": {
+		Color:     rl.NewColor(249, 248, 248, 160),
+		IsSolid:   false,
+		IsVisible: true,
+	},
 	"Air": {
 		Color:     rl.NewColor(0, 0, 0, 0), // Transparent
 		IsSolid:   false,

@@ -31,7 +31,7 @@ type Game struct {
 	LightPosition rl.Vector3
 }
 
-func loadShader(camera rl.Camera, chunkCache *world.ChunkCache) rl.Shader {
+func loadShader(camera rl.Camera) rl.Shader {
 	shader := rl.LoadShader("shaders/shading.vs", "shaders/shading.fs")
 	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
 
@@ -75,9 +75,9 @@ func InitGame() Game {
 	LightPosition := rl.NewVector3(0, 6, 0)
 
 	chunkCache := world.NewChunkCache() // Initialize ChunkCache
-	shader := loadShader(camera, chunkCache)
+	shader := loadShader(camera)
 
-	// Cria o primeiro chunk na origem
+	// Creates the first chunk at the origin
 	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
