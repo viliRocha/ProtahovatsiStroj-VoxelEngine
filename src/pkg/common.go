@@ -9,7 +9,7 @@ var PlantModels [4]rl.Model
 const (
 	ChunkHeight        int     = 80
 	ChunkSize          int     = 32
-	ChunkDistance      int     = 1
+	ChunkDistance      int     = 3
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 
@@ -29,6 +29,20 @@ type TreeData struct {
 	StructureStr string
 }
 
+type SpecialVoxel struct {
+	Position  Coords
+	Type      string
+	Model     rl.Model // usado para plantas
+	IsSurface bool     // usado para água
+}
+
+type TransparentItem struct {
+	Position       rl.Vector3
+	Type           string
+	Color          rl.Color
+	IsSurfaceWater bool
+}
+
 type Chunk struct {
 	//Materials rl.Material
 	Voxels    [ChunkSize][ChunkSize][ChunkSize]VoxelData
@@ -36,11 +50,13 @@ type Chunk struct {
 	Plants    []PlantData
 	Trees     []TreeData
 
-	Mesh       rl.Mesh
-	Model      rl.Model
-	Faces      []FaceData // List of built faces
-	IsOutdated bool       // Flag to know if you need to update the mesh
-	HasMesh    bool       // Flag to know if the mesh has already been created
+	Mesh          rl.Mesh
+	Model         rl.Model
+	Faces         []FaceData // List of built faces
+	SpecialVoxels []SpecialVoxel
+	UploadedOnce  bool
+	IsOutdated    bool // Flag to know if you need to update the mesh
+	HasMesh       bool // Flag to know if the mesh has already been created
 }
 
 type FaceData struct {

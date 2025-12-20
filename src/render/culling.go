@@ -8,11 +8,11 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// Função auxiliar: calcula fator de occlusion para um vértice
+// calculates occlusion factor per vertex
 func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) float32 {
-	// Cada vértice da face tem 3 vizinhos potenciais (duas arestas + um diagonal)
-	// Se todos são sólidos, o vértice fica mais escuro.
-	offsets := pkg.VertexAOOffsets[face][corner] // tabela de offsets (dx,dy,dz) para cada vizinho
+	// Each vertex of the face has 3 potential neighbors (two edges + one diagonal)
+	// If everything is solid, the vertex gets darker.
+	offsets := pkg.VertexAOOffsets[face][corner] // offset table (dx,dy,dz) for each neighbor
 	occlusion := 0
 	for _, off := range offsets {
 		nx := pos.X + off[0]
@@ -25,12 +25,12 @@ func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) fl
 				occlusion++
 			}
 		} else {
-			// fora do chunk → trata como sólido para não deixar borda clara demais
+			// outside the chunk → treats it as solid to avoid leaving the edge too light
 			occlusion++
 		}
 	}
 
-	// Normaliza: 0 vizinhos sólidos = claro, 3 vizinhos sólidos = escuro
+	// Normalize: 0 solid neighbors = light, 3 solid neighbors = dark
 	return 0.7 + 0.5*(1.0-float32(occlusion)/3.0)
 }
 
@@ -39,14 +39,16 @@ func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
 	for corner := 0; corner < 4; corner++ {
 		total += float64(calculateVoxelAO(chunk, pos, face, corner))
 	}
-	// média dos 4 cantos
+	// average of the 4 corners
 	return float32(total / 4.0)
 }
 
 func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.Vector3*/) {
+	// Clears buffers and specials list
 	var vertices []float32
 	var indices []uint16
 	var colors []uint8
+	chunk.SpecialVoxels = chunk.SpecialVoxels[:0]
 
 	indexOffset := uint16(0)
 
@@ -69,7 +71,41 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 		voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
 		block := world.BlockTypes[voxel.Type]
 
-		if !block.IsVisible || voxel.Type == "Water" || voxel.Type == "Plant" || voxel.Type == "Cloud" {
+		// Special cases → not included in the mesh, but they are kept
+		switch voxel.Type {
+		case "Plant":
+			chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
+				Position: pos,
+				Type:     voxel.Type,
+				Model:    voxel.Model,
+			})
+			continue
+		case "Water":
+			// only add if it's a surface
+			isSurface := true
+			if pos.Y+1 < pkg.ChunkSize {
+				above := chunk.Voxels[pos.X][pos.Y+1][pos.Z]
+				if above.Type == "Water" {
+					isSurface = false
+				}
+			}
+			if isSurface {
+				chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
+					Position:  pos,
+					Type:      voxel.Type,
+					IsSurface: true,
+				})
+			}
+			continue
+		case "Cloud":
+			chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
+				Position: pos,
+				Type:     voxel.Type,
+			})
+			continue
+		}
+
+		if !block.IsSolid {
 			continue
 		}
 
@@ -81,7 +117,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 				(pos.Y*83492791 + pos.Z*73856093)) % 8)
 
 		for face := 0; face < 6; face++ {
-			if !shouldDrawFace(chunk, pos, face) && voxel.Type != "Leaves" {
+			if !shouldDrawFace(chunk, pos, face) {
 				continue
 			}
 

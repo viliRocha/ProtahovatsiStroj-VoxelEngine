@@ -83,7 +83,7 @@ func InitGame() Game {
 
 	chunkCache.Active[originCoord] = world.GenerateTerrainChunk(originPos, perlinNoise, chunkCache, nil, false, nil, false)
 
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(120)
 
 	return Game{
 		Camera:        camera,

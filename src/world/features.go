@@ -1,7 +1,6 @@
 package world
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"strconv"
@@ -78,7 +77,6 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.Plant
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	if reusePlants && oldPlants != nil {
-		fmt.Println("Reusing plants:", len(oldPlants))
 		for _, plant := range oldPlants {
 			localX := int(plant.Position.X) - int(chunkPos.X)
 			localY := int(plant.Position.Y)
@@ -256,7 +254,6 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
-		fmt.Println("Reusing trees:", len(oldTrees))
 		for _, tree := range oldTrees {
 			placeTree(chunkCache, tree.Position, tree.StructureStr)
 			chunk.Trees = append(chunk.Trees, tree)

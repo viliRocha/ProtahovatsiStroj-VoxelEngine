@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.11.0
+### v0.11.2
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -12,10 +12,10 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
 ## Upcoming Features 📋
-- **Dynamic Lighting**: Implemented basic lighting with shading and ambient occlusion for better depth perception.
-- **Fog Effects**: Create atmospheric depth with fog.
+- **Dynamic Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
+- **atmospheric effects**: Atmospheric depth with fog and basic clouds.
 - **Block Interaction**: Enable players to place and destroy blocks.
-- **Biome Diversity**: Implement various biomes for a richer exploration experience.
+- **Biome Diversity**: Implement various biomes depending on the terrain.
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️

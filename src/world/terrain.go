@@ -26,9 +26,9 @@ func chooseRandomTree() string {
 func GenerateAerialChunk(position rl.Vector3, p *perlin.Perlin, chunkCache *ChunkCache) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
 
-	localY := 15     // altura fixa das nuvens
-	threshold := 0.1 // limiar para formar nuvem
-	cloudFrequency := 0.07
+	localY := 30      // Cloud height
+	threshold := 0.05 // Intensity of the cloud formation
+	cloudFrequency := 0.05
 
 	// It only generates clouds if this is the first aerial chunk
 	if int(position.Y) == pkg.ChunkSize {
