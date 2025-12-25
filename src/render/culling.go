@@ -31,7 +31,7 @@ func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) fl
 	}
 
 	// Normalize: 0 solid neighbors = light, 3 solid neighbors = dark
-	return 0.7 + 0.5*(1.0-float32(occlusion)/3.0)
+	return 1.5 + 0.5*(1.0-float32(occlusion)/3.0)
 }
 
 func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
@@ -43,7 +43,7 @@ func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
 	return float32(total / 4.0)
 }
 
-func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.Vector3*/) {
+func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3, shader rl.Shader) {
 	// Clears buffers and specials list
 	var vertices []float32
 	var indices []uint16
@@ -132,7 +132,7 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 				voxelColor := applyLighting(block.Color, lightIntensity)
 			*/
 
-			//ao := calculateFaceAO(chunk, pos, face)
+			ao := calculateFaceAO(chunk, pos, face)
 
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
@@ -142,16 +142,14 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 					float32(pos.Z)+v[2],
 				)
 
-				/*
-					colors = append(colors,
-						uint8(float32(c.R+colorModifier)*ao),
-						uint8(float32(c.G+colorModifier)*ao),
-						uint8(float32(c.B+colorModifier)*ao),
-						c.A,
-					)
-				*/
+				colors = append(colors,
+					uint8(float32(c.R+colorModifier)*ao),
+					uint8(float32(c.G+colorModifier)*ao),
+					uint8(float32(c.B+colorModifier)*ao),
+					c.A,
+				)
 
-				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
+				//colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
 			}
 
 			//	Add the two triangles of the face
@@ -177,18 +175,13 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.V
 	if len(colors) > 0 {
 		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
 	}
-	/*
-		if len(aoValues) > 0 {
-			// envia AO como "Texcoords" (cada vértice recebe um valor)
-			mesh.Texcoords = (*float32)(unsafe.Pointer(&aoValues[0]))
-		}
-	*/
 
 	rl.UploadMesh(&mesh, false)
 	model := rl.LoadModelFromMesh(mesh)
 
 	// Create material and assign it
 	material := rl.LoadMaterialDefault()
+	material.Shader = shader
 	materials := []rl.Material{material}
 	model.MaterialCount = int32(len(materials))
 	model.Materials = &materials[0]

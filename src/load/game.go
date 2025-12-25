@@ -23,31 +23,11 @@ const (
 )
 
 type Game struct {
-	Camera        rl.Camera
-	CameraMode    rl.CameraMode
-	ChunkCache    *world.ChunkCache
-	PerlinNoise   *perlin.Perlin
-	Shader        rl.Shader
-	LightPosition rl.Vector3
-}
-
-func loadShader(camera rl.Camera) rl.Shader {
-	shader := rl.LoadShader("shaders/shading.vs", "shaders/shading.fs")
-	*shader.Locs = rl.GetShaderLocation(shader, "viewPos")
-
-	ambientLoc := rl.GetShaderLocation(shader, "ambient")
-	shaderValue := []float32{0.1, 0.1, 0.1, 1.0}
-	rl.SetShaderValue(shader, ambientLoc, shaderValue, rl.ShaderUniformVec4)
-
-	cameraPos := []float32{camera.Position.X, camera.Position.Y, camera.Position.Z}
-	rl.SetShaderValue(shader, *shader.Locs, cameraPos, rl.ShaderUniformVec3)
-
-	lights := make([]Light, 4)
-	lights[0] = NewLight(LightTypePoint, rl.NewVector3(-2, 1, -2), rl.NewVector3(0, 0, 0), rl.Yellow, shader)
-
-	rl.SetShaderValue(shader, *shader.Locs, cameraPos, rl.ShaderUniformVec3)
-
-	return shader
+	Camera      rl.Camera
+	CameraMode  rl.CameraMode
+	ChunkCache  *world.ChunkCache
+	PerlinNoise *perlin.Perlin
+	Shader      rl.Shader
 }
 
 func InitGame() Game {
@@ -67,15 +47,31 @@ func InitGame() Game {
 	seed := rand.Int63()
 	perlinNoise := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed)
 
+	shader := rl.LoadShader("shaders/lighting.vs", "shaders/fog.fs")
+
+	// Locations (do not index shader.Locs)
+	locFogDensity := rl.GetShaderLocation(shader, "fogDensity")
+
+	// Fog
+	fogDensity := float32(0.009)
+	rl.SetShaderValue(shader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
+
 	// Load .vox models
-	for i := range 4 {
+	for i := 0; i < len(pkg.PlantModels); i++ {
 		pkg.PlantModels[i] = rl.LoadModel(fmt.Sprintf("assets/plants/plant_%d.vox", i))
+
+		// Garantir material válido e aplicar shader
+		if pkg.PlantModels[i].MaterialCount == 0 || pkg.PlantModels[i].Materials == nil {
+			def := rl.LoadMaterialDefault()
+			pkg.PlantModels[i].MaterialCount = 1
+			pkg.PlantModels[i].Materials = &def
+		}
+		(*pkg.PlantModels[i].Materials).Shader = shader
 	}
 
-	LightPosition := rl.NewVector3(0, 6, 0)
+	//LightPosition := rl.NewVector3(0, 6, 0)
 
 	chunkCache := world.NewChunkCache() // Initialize ChunkCache
-	shader := loadShader(camera)
 
 	// Creates the first chunk at the origin
 	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
@@ -86,11 +82,10 @@ func InitGame() Game {
 	rl.SetTargetFPS(120)
 
 	return Game{
-		Camera:        camera,
-		CameraMode:    cameraMode,
-		ChunkCache:    chunkCache,
-		PerlinNoise:   perlinNoise,
-		Shader:        shader,
-		LightPosition: LightPosition,
+		Camera:      camera,
+		CameraMode:  cameraMode,
+		ChunkCache:  chunkCache,
+		PerlinNoise: perlinNoise,
+		Shader:      shader,
 	}
 }

@@ -9,19 +9,19 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Procedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
 - **Cave Generation**: Intricate cave systems made using 3D perlin noise.
+- **atmospheric effects**: Atmospheric depth with fog and basic clouds.
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
 ## Upcoming Features 📋
 - **Dynamic Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
-- **atmospheric effects**: Atmospheric depth with fog and basic clouds.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes depending on the terrain.
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
 <img src="./img/lighting2.png" alt="light" width="1000px">
-<img src="./img/landscape9.png" alt="world_gen" width="1000px">
-<img src="./img/landscape10.png" alt="world_gen" width="1000px">
+<img src="./img/landscape11.png" alt="world_gen" width="1000px">
+<img src="./img/landscape12.png" alt="world_gen" width="1000px">
 
 ## Getting Started 🚀
 To get started with the voxel engine, clone the repository and open the folder. Make sure you have Go installed on your device. Then, run the command `go mod tidy` and finally, to compile the project, run `go run ./src`.
@@ -30,4 +30,4 @@ To get started with the voxel engine, clone the repository and open the folder. 
 This project is licensed under the MIT License - see the `LICENSE` file for details.
 
 ## Acknowledgments 🙏
-Inspired by [CubeWorld](https://store.steampowered.com/app/1128000/Cube_World/) and [TanTan's](https://github.com/TanTanDev) Voxel engine built with the beavy engine. I would also like to acknowledge the use of voxelized vegetation assets from [MangoVoxel](https://mangovoxel.itch.io/voxelfoliage) in my voxel engine. <!--Special thanks to the resources and tutorials that helped shape this project.-->
+Inspired by [CubeWorld](https://store.steampowered.com/app/1128000/Cube_World/) and [TanTan's](https://github.com/TanTanDev) Voxel engine built with the beavy engine. I would also like to acknowledge the use of voxelized vegetation assets from [MangoVoxel](https://mangovoxel.itch.io/voxelfoliage) in my voxel engine. The shader code was based on examples provided by [raylib](https://www.raylib.com/).<!--Special thanks to the resources and tutorials that helped shape this project.-->

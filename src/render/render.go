@@ -12,11 +12,9 @@ import (
 )
 
 func RenderVoxels(game *load.Game) {
-	view := rl.GetCameraMatrix(game.Camera)
-	projection := rl.GetMatrixProjection()
+	cam := game.Camera.Position
 
-	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_proj"), projection)
-	rl.SetShaderValueMatrix(game.Shader, rl.GetShaderLocation(game.Shader, "m_view"), view)
+	rl.SetShaderValue(game.Shader, rl.GetShaderLocation(game.Shader, "viewPos"), []float32{cam.X, cam.Y, cam.Z}, rl.ShaderUniformVec3)
 
 	// --- Round 1: solids ---
 	for coord, chunk := range game.ChunkCache.Active {
@@ -27,9 +25,8 @@ func RenderVoxels(game *load.Game) {
 			float32(coord.Z*pkg.ChunkSize),
 		)
 
-		//	Limites so there are less then 2 chunks being rendered at the same frame
 		if chunk.IsOutdated {
-			BuildChunkMesh(chunk, chunkPos /*, game.LightPosition*/)
+			BuildChunkMesh(chunk, chunkPos, game.Shader)
 			chunk.IsOutdated = false // reset flag → do not rebuild each frame
 			chunk.HasMesh = true     // note that already has ready-made fabric
 		}
@@ -61,7 +58,6 @@ func RenderVoxels(game *load.Game) {
 
 	// --- Coleta global de transparentes ---
 	var transparentItems []pkg.TransparentItem
-	cam := game.Camera.Position
 
 	for coord, chunk := range game.ChunkCache.Active {
 		chunkPos := rl.NewVector3(
@@ -105,6 +101,7 @@ func RenderVoxels(game *load.Game) {
 			rl.DrawCube(it.Position, 1.0, 0.0, 1.0, it.Color)
 		}
 	}
+
 	rl.EnableDepthMask()
 	rl.SetBlendMode(rl.BlendMode(0))
 }
