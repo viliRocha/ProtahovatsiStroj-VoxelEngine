@@ -28,11 +28,15 @@ type Game struct {
 	ChunkCache  *world.ChunkCache
 	PerlinNoise *perlin.Perlin
 	Shader      rl.Shader
+	//LightPosition rl.Vector3
 }
 
 func InitGame() Game {
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(ScreenWidth, ScreenHeight, "Protahovatsi Stroj - Voxel Game")
+
+	// Disable INFO logs, only show errors
+	rl.SetTraceLogLevel(rl.LogError)
 
 	camera := rl.Camera{
 		Position:   rl.NewVector3(2.79, 19.45, 10.0),
@@ -52,8 +56,10 @@ func InitGame() Game {
 	// Locations (do not index shader.Locs)
 	locFogDensity := rl.GetShaderLocation(shader, "fogDensity")
 
-	// Fog
-	fogDensity := float32(0.009)
+	// Fog density calculation
+	// Inverse relationship: more chunks → less fog
+	fogDensity := float32(0.045 * (1.0 / float32(pkg.ChunkDistance)))
+	fmt.Println(fogDensity)
 	rl.SetShaderValue(shader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
 
 	// Load .vox models
@@ -69,7 +75,7 @@ func InitGame() Game {
 		(*pkg.PlantModels[i].Materials).Shader = shader
 	}
 
-	//LightPosition := rl.NewVector3(0, 6, 0)
+	//LightPosition := rl.NewVector3(0, 5, 0)
 
 	chunkCache := world.NewChunkCache() // Initialize ChunkCache
 
@@ -87,5 +93,6 @@ func InitGame() Game {
 		ChunkCache:  chunkCache,
 		PerlinNoise: perlinNoise,
 		Shader:      shader,
+		//LightPosition: LightPosition,
 	}
 }

@@ -56,7 +56,6 @@ type Chunk struct {
 	SpecialVoxels []SpecialVoxel
 	UploadedOnce  bool
 	IsOutdated    bool // Flag to know if you need to update the mesh
-	HasMesh       bool // Flag to know if the mesh has already been created
 }
 
 type FaceData struct {

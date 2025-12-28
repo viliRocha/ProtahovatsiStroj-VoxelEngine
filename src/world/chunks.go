@@ -13,6 +13,8 @@ import (
 
 var OppositeFaces = [6]int{1, 0, 3, 2, 5, 4}
 
+const MaxChunksPerFrame = 2
+
 type ChunkCoord struct {
 	X, Y, Z int
 }
@@ -151,10 +153,17 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 		}()
 	}
 
+	// Counter to limit how many chunks are enqueued
+	chunksQueued := 0
+
 	// Send the chunk positions to be loaded
 	for x := playerCoord.X - pkg.ChunkDistance; x <= playerCoord.X+pkg.ChunkDistance; x++ {
 		for z := playerCoord.Z - pkg.ChunkDistance; z <= playerCoord.Z+pkg.ChunkDistance; z++ {
 			for y := playerCoord.Y - pkg.ChunkDistance; y <= playerCoord.Y+pkg.ChunkDistance; y++ {
+				if chunksQueued >= MaxChunksPerFrame {
+					break
+				}
+
 				coord := ChunkCoord{X: x, Y: y, Z: z}
 
 				// Allow aerial chunks to load if there are pending writes for them
@@ -166,6 +175,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 					chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
 
 					chunkRequests <- chunkPos
+					chunksQueued++
 				}
 			}
 		}

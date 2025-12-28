@@ -26,18 +26,18 @@ func RenderVoxels(game *load.Game) {
 		)
 
 		if chunk.IsOutdated {
-			BuildChunkMesh(chunk, chunkPos, game.Shader)
+			BuildChunkMesh(game, chunk, chunkPos)
+			//BuildCloudGreddyMesh(game, chunk)
 			chunk.IsOutdated = false // reset flag → do not rebuild each frame
-			chunk.HasMesh = true     // note that already has ready-made fabric
 		}
 
 		// If the chunk has mesh, draw directly
-		if chunk.HasMesh && chunk.Model.MeshCount > 0 && chunk.Model.Meshes != nil {
+		if chunk.Model.MeshCount > 0 && chunk.Model.Meshes != nil {
 			rl.DrawModel(chunk.Model, chunkPos, 1.0, rl.White)
 		}
 	}
 
-	// --- Passagem 2: plantas por chunk (sem ordenação global) ---
+	// --- Passage 2: plants per chunk (without global sorting) ---
 	for coord, chunk := range game.ChunkCache.Active {
 		chunkPos := rl.NewVector3(
 			float32(coord.X*pkg.ChunkSize),
@@ -56,7 +56,7 @@ func RenderVoxels(game *load.Game) {
 		}
 	}
 
-	// --- Coleta global de transparentes ---
+	// --- Global collection of transparencies ---
 	var transparentItems []pkg.TransparentItem
 
 	for coord, chunk := range game.ChunkCache.Active {
@@ -82,22 +82,34 @@ func RenderVoxels(game *load.Game) {
 		}
 	}
 
-	// --- Ordenação back-to-front ---
+	// --- Back-to-front sorting ---
 	sort.Slice(transparentItems, func(i, j int) bool {
 		di := rl.Vector3Length(rl.Vector3Subtract(transparentItems[i].Position, cam))
 		dj := rl.Vector3Length(rl.Vector3Subtract(transparentItems[j].Position, cam))
-		return di > dj // mais distante primeiro
+		return di > dj // furthest first
 	})
 
-	// --- Passagem 2: transparentes ---
+	// --- Round 3: transparent ---
 	rl.SetBlendMode(rl.BlendAlpha)
-	rl.DisableDepthMask() // não escreve no depth, mas testa
+	rl.DisableDepthMask()
 	for _, it := range transparentItems {
 		switch it.Type {
 		case "Water":
 			p := rl.NewVector3(it.Position.X+0.5, it.Position.Y+0.5, it.Position.Z+0.5)
+
+			/*
+				// calculates light intensity for this position
+				lightIntensity := calculateLightIntensity(p, game.LightPosition)
+				litColor := applyLighting(it.Color, lightIntensity)
+			*/
+
 			rl.DrawPlane(p, rl.NewVector2(1.0, 1.0), it.Color)
 		case "Cloud":
+			/*
+				lightIntensity := calculateLightIntensity(it.Position, game.LightPosition)
+				litColor := applyLighting(it.Color, lightIntensity)
+			*/
+
 			rl.DrawCube(it.Position, 1.0, 0.0, 1.0, it.Color)
 		}
 	}
@@ -134,15 +146,12 @@ func applyUnderwaterEffect(game *load.Game) {
 func RenderGame(game *load.Game) {
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.NewColor(150, 208, 233, 255)) //   Light blue
+	//rl.ClearBackground(rl.NewColor(134, 13, 13, 255))  Red
 
 	rl.BeginMode3D(game.Camera)
 
-	//rl.BeginShaderMode(game.Shader)
-
 	//	Begin drawing solid blocks and then transparent ones (avoid flickering)
 	RenderVoxels(game)
-
-	//rl.EndShaderMode()
 
 	rl.EndMode3D()
 

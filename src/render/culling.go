@@ -1,6 +1,7 @@
 package render
 
 import (
+	"go-engine/src/load"
 	"go-engine/src/pkg"
 	"go-engine/src/world"
 	"unsafe"
@@ -43,7 +44,7 @@ func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
 	return float32(total / 4.0)
 }
 
-func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3, shader rl.Shader) {
+func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	// Clears buffers and specials list
 	var vertices []float32
 	var indices []uint16
@@ -123,16 +124,16 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3, shader rl.Shader) {
 
 			/*
 				voxelPosition := rl.NewVector3(
-					chunkPos.X+float32(x),
-					chunkPos.Y+float32(y),
-					chunkPos.Z+float32(z),
+					chunkPos.X+float32(pos.X),
+					chunkPos.Y+float32(pos.Y),
+					chunkPos.Z+float32(pos.Z),
 				)
 
-				lightIntensity := calculateLightIntensity(voxelPosition, lightPosition)
-				voxelColor := applyLighting(block.Color, lightIntensity)
+				lightIntensity := calculateLightIntensity(voxelPosition, game.LightPosition)
+				voxelColor := applyLighting(c, lightIntensity)
 			*/
 
-			ao := calculateFaceAO(chunk, pos, face)
+			//ao := calculateFaceAO(chunk, pos, face)
 
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
@@ -142,14 +143,16 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3, shader rl.Shader) {
 					float32(pos.Z)+v[2],
 				)
 
-				colors = append(colors,
-					uint8(float32(c.R+colorModifier)*ao),
-					uint8(float32(c.G+colorModifier)*ao),
-					uint8(float32(c.B+colorModifier)*ao),
-					c.A,
-				)
+				/*
+					colors = append(colors,
+						uint8(float32(c.R+colorModifier)*ao),
+						uint8(float32(c.G+colorModifier)*ao),
+						uint8(float32(c.B+colorModifier)*ao),
+						c.A,
+					)
+				*/
 
-				//colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
+				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
 			}
 
 			//	Add the two triangles of the face
@@ -181,14 +184,122 @@ func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3, shader rl.Shader) {
 
 	// Create material and assign it
 	material := rl.LoadMaterialDefault()
-	material.Shader = shader
+	material.Shader = game.Shader
 	materials := []rl.Material{material}
 	model.MaterialCount = int32(len(materials))
 	model.Materials = &materials[0]
 
 	// Assign to chunk
 	chunk.Model = model
-	chunk.HasMesh = true
+	chunk.IsOutdated = false
+}
+
+func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
+	var vertices []float32
+	var indices []uint16
+	var colors []uint8
+	indexOffset := uint16(0)
+
+	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
+
+	// percorre cada camada Z
+	for z := 0; z < Nz; z++ {
+		// matriz de marcação para faces já mescladas
+		used := make([]bool, Nx*Ny)
+
+		for y := 0; y < Ny; y++ {
+			for x := 0; x < Nx; x++ {
+				idx := y*Nx + x
+				if used[idx] {
+					continue
+				}
+
+				voxel := chunk.Voxels[x][y][z]
+				if voxel.Type != "Cloud" {
+					continue
+				}
+
+				// tenta expandir retângulo na direção X
+				width := 1
+				for x+width < Nx {
+					next := chunk.Voxels[x+width][y][z]
+					if next.Type == "Cloud" && !used[y*Nx+(x+width)] {
+						width++
+					} else {
+						break
+					}
+				}
+
+				/*
+					// tenta expandir em Y também
+					height := 1
+					expand := true
+					for y+height < Ny && expand {
+						for w := 0; w < width; w++ {
+							next := chunk.Voxels[x+w][y+height][z]
+							if next.Type != "Cloud" || used[(y+height)*Nx+(x+w)] {
+								expand = false
+								break
+							}
+						}
+						if expand {
+							height++
+						}
+					}
+				*/
+
+				// marca como usado
+				for w := 0; w < width; w++ {
+					used[y*Nx+(x+w)] = true
+				}
+
+				// cria quad (face superior da nuvem, por exemplo)
+				quad := [4][3]float32{
+					{float32(x), float32(y + 1), float32(z)},
+					{float32(x + width), float32(y + 1), float32(z)},
+					{float32(x + width), float32(y + 1), float32(z + 1)},
+					{float32(x), float32(y + 1), float32(z + 1)},
+				}
+
+				for _, v := range quad {
+					vertices = append(vertices, v[0], v[1], v[2])
+					c := world.BlockTypes["Cloud"].Color
+					colors = append(colors, c.R, c.G, c.B, c.A)
+				}
+
+				indices = append(indices,
+					indexOffset, indexOffset+1, indexOffset+2,
+					indexOffset, indexOffset+2, indexOffset+3,
+				)
+				indexOffset += 4
+			}
+		}
+	}
+
+	mesh := rl.Mesh{
+		VertexCount:   int32(len(vertices) / 3),
+		TriangleCount: int32(len(indices) / 3),
+	}
+	if len(vertices) > 0 {
+		mesh.Vertices = (*float32)(unsafe.Pointer(&vertices[0]))
+	}
+	if len(indices) > 0 {
+		mesh.Indices = (*uint16)(unsafe.Pointer(&indices[0]))
+	}
+	if len(colors) > 0 {
+		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
+	}
+
+	rl.UploadMesh(&mesh, false)
+	model := rl.LoadModelFromMesh(mesh)
+
+	mat := rl.LoadMaterialDefault()
+	mat.Shader = game.Shader
+	mat.Maps.Color = rl.White
+	model.MaterialCount = 1
+	model.Materials = &mat
+
+	//chunk.Model = model
 	chunk.IsOutdated = false
 }
 

@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.11.2
+### v0.11.4
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -9,17 +9,17 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Procedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
 - **Cave Generation**: Intricate cave systems made using 3D perlin noise.
-- **atmospheric effects**: Atmospheric depth with fog and basic clouds.
+- **Atmospheric effects**: Atmospheric depth with fog and basic clouds.
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
 ## Upcoming Features 📋
-- **Dynamic Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
+- **Improved Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes depending on the terrain.
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
-<img src="./img/lighting2.png" alt="light" width="1000px">
+<img src="./img/lighting3.png" alt="light" width="1000px">
 <img src="./img/landscape11.png" alt="world_gen" width="1000px">
 <img src="./img/landscape12.png" alt="world_gen" width="1000px">
 

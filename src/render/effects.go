@@ -15,6 +15,6 @@ func applyLighting(color rl.Color, intensity float32) rl.Color {
 		uint8(float32(color.R)*intensity),
 		uint8(float32(color.G)*intensity),
 		uint8(float32(color.B)*intensity),
-		255,
+		color.A,
 	)
 }
