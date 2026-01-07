@@ -50,7 +50,7 @@ func ToChunkCoord(pos rl.Vector3) ChunkCoord {
 	}
 }
 
-func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
+func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2 *perlin.Perlin) *pkg.Chunk {
 	coord := ToChunkCoord(position)
 
 	cc.CacheMutex.RLock()
@@ -61,33 +61,24 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk
 
 	var newChunk *pkg.Chunk
 
-	if exists {
-		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position, p, cc)
-		} else if int(position.Y) == 0 {
-			newChunk = GenerateTerrainChunk(position, p, cc, oldPlants, true, oldTrees, true)
+	if int(position.Y) == 0 {
+		if exists {
+			newChunk = GenerateTerrainChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
 		} else {
-			//newChunk = GenerateUndergroundChunk(position, p)
-			newChunk = GenerateAerialChunk(position, p, cc)
-		}
-		newChunk.IsOutdated = true // reset flag after reconstruction --> ensures that the mesh is rebuilt and the plant voxels are reapplied
-	} else {
-		// First time the chunk is generated
-		if int(position.Y) > 0 {
-			newChunk = GenerateAerialChunk(position, p, cc)
-		} else if int(position.Y) == 0 {
+			// First time the chunk is generated
 			// If there are saved plants, reuse them; if not, create new ones
 			if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
-				newChunk = GenerateTerrainChunk(position, p, cc, oldPlants, true, oldTrees, true)
+				newChunk = GenerateTerrainChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
 			} else {
-				newChunk = GenerateTerrainChunk(position, p, cc, nil, false, nil, false)
+				newChunk = GenerateTerrainChunk(position, p1, p2, cc, nil, false, nil, false)
 			}
-		} else {
-			//newChunk = GenerateUndergroundChunk(position, p)
-			newChunk = GenerateAerialChunk(position, p, cc)
 		}
-		newChunk.IsOutdated = true
+	} else {
+		//newChunk = GenerateUndergroundChunk(position, p)
+		newChunk = GenerateAerialChunk(position, p1, cc)
 	}
+
+	newChunk.IsOutdated = true // reset flag after reconstruction --> ensures that the mesh is rebuilt and the plant voxels are reapplied
 
 	// Update caches
 	cc.CacheMutex.Lock()
@@ -137,7 +128,7 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 	}
 }
 
-func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.Perlin) {
+func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2 *perlin.Perlin) {
 	playerCoord := ToChunkCoord(playerPosition)
 
 	chunkRequests := make(chan rl.Vector3, 100)
@@ -147,7 +138,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p *perlin.P
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for cp := range chunkRequests {
-				chunkCache.GetChunk(cp, p)
+				chunkCache.GetChunk(cp, p1, p2)
 			}
 			done <- struct{}{}
 		}()

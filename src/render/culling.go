@@ -32,7 +32,7 @@ func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) fl
 	}
 
 	// Normalize: 0 solid neighbors = light, 3 solid neighbors = dark
-	return 1.5 + 0.5*(1.0-float32(occlusion)/3.0)
+	return 0.6 + 0.5*(1.0-float32(occlusion)/3.0)
 }
 
 func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
@@ -42,6 +42,45 @@ func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
 	}
 	// average of the 4 corners
 	return float32(total / 4.0)
+}
+
+func faceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
+	// Sample neighbors relevant to the face (adjust offsets per face)
+	// Example for +Y (top) face:
+	offsets := []pkg.Coords{
+		{pos.X, pos.Y + 1, pos.Z}, // directly above
+		{pos.X + 1, pos.Y + 1, pos.Z},
+		{pos.X - 1, pos.Y + 1, pos.Z},
+		{pos.X, pos.Y + 1, pos.Z + 1},
+		{pos.X, pos.Y + 1, pos.Z - 1},
+	}
+
+	occlusion := 0
+	for _, o := range offsets {
+		if o.X >= 0 && o.X < pkg.ChunkSize &&
+			o.Y >= 0 && o.Y < pkg.ChunkSize &&
+			o.Z >= 0 && o.Z < pkg.ChunkSize {
+			if chunk.Voxels[o.X][o.Y][o.Z].Type != "Air" {
+				occlusion++
+			}
+		}
+
+	}
+
+	// Map occlusion count to AO factor
+	// Tune these values to taste
+	base := float32(1.0)
+	step := float32(0.1) // each neighbor reduces AO by 0.1
+	minAO := float32(0.5)
+
+	ao := base - step*float32(occlusion)
+	if ao < minAO {
+		ao = minAO
+	}
+	if ao > 1.0 {
+		ao = 1.0
+	}
+	return ao
 }
 
 func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
@@ -133,7 +172,7 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				voxelColor := applyLighting(c, lightIntensity)
 			*/
 
-			//ao := calculateFaceAO(chunk, pos, face)
+			//ao := faceAO(chunk, pos, face)
 
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
@@ -142,13 +181,17 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 					float32(pos.Y)+v[1],
 					float32(pos.Z)+v[2],
 				)
-
 				/*
+
+						colors = append(colors,
+							uint8(float32(c.R+colorModifier)*ao),
+							uint8(float32(c.G+colorModifier)*ao),
+							uint8(float32(c.B+colorModifier)*ao),
+							c.A,
+						)
 					colors = append(colors,
-						uint8(float32(c.R+colorModifier)*ao),
-						uint8(float32(c.G+colorModifier)*ao),
-						uint8(float32(c.B+colorModifier)*ao),
-						c.A,
+						uint8(c.R), uint8(c.G), uint8(c.B),
+						uint8(ao*255.0), // store AO in alpha
 					)
 				*/
 
@@ -184,7 +227,7 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 
 	// Create material and assign it
 	material := rl.LoadMaterialDefault()
-	material.Shader = game.Shader
+	material.Shader = game.FogShader
 	materials := []rl.Material{material}
 	model.MaterialCount = int32(len(materials))
 	model.Materials = &materials[0]
@@ -294,7 +337,7 @@ func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
 	model := rl.LoadModelFromMesh(mesh)
 
 	mat := rl.LoadMaterialDefault()
-	mat.Shader = game.Shader
+	mat.Shader = game.FogShader
 	mat.Maps.Color = rl.White
 	model.MaterialCount = 1
 	model.Materials = &mat

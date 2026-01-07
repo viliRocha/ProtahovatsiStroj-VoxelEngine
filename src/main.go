@@ -30,12 +30,13 @@ func main() {
 		rl.UpdateCamera(&game.Camera, game.CameraMode)
 
 		// Manage chunks based on player's position
-		world.ManageChunks(game.Camera.Position, game.ChunkCache, game.PerlinNoise)
+		world.ManageChunks(game.Camera.Position, game.ChunkCache, game.Perlin1, game.Perlin2)
 
 		//  Draw
 		render.RenderGame(&game)
 	}
-	rl.UnloadShader(game.Shader)
+	rl.UnloadShader(game.FogShader)
+	//rl.UnloadShader(game.AOShader)
 
 	// After the loop ends:
 	defer rl.CloseWindow()

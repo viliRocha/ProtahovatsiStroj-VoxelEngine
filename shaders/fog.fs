@@ -1,7 +1,6 @@
 #version 330
 
 // Input vertex attributes (from vertex shader)
-in vec2 fragTexCoord;
 in vec4 fragColor;
 in vec3 fragPosition;
 in vec3 fragNormal;
@@ -35,19 +34,18 @@ void main()
     vec3 viewD = normalize(viewPos - fragPosition);
 
     // fragment shader code
-    for (int i = 0; i < MAX_LIGHTS; i++)
-    {
-        if (lights[i].enabled == 1)
-        {
+    for (int i = 0; i < MAX_LIGHTS; i++) {
+        if (lights[i].enabled == 1) {
             vec3 light = vec3(0.0);
 
-            if (lights[i].type == LIGHT_DIRECTIONAL) light = -normalize(lights[i].target - lights[i].position);
-            if (lights[i].type == LIGHT_POINT) light = normalize(lights[i].position - fragPosition);
+            if (lights[i].type == LIGHT_DIRECTIONAL) {
+                light = -normalize(lights[i].target - lights[i].position);
+            }
+            if (lights[i].type == LIGHT_POINT) {
+                light = normalize(lights[i].position - fragPosition);
+            }
 
             float NdotL = max(dot(normal, light), 0.0);
-
-            float specCo = 0.0;
-            if (NdotL > 0.0) specCo = pow(max(0.0, dot(viewD, reflect(-(light), normal))), 16.0); // Shine: 16.0
         }
     }
 

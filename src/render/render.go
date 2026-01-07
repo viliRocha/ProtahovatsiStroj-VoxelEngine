@@ -14,7 +14,7 @@ import (
 func RenderVoxels(game *load.Game) {
 	cam := game.Camera.Position
 
-	rl.SetShaderValue(game.Shader, rl.GetShaderLocation(game.Shader, "viewPos"), []float32{cam.X, cam.Y, cam.Z}, rl.ShaderUniformVec3)
+	rl.SetShaderValue(game.FogShader, rl.GetShaderLocation(game.FogShader, "viewPos"), []float32{cam.X, cam.Y, cam.Z}, rl.ShaderUniformVec3)
 
 	// --- Round 1: solids ---
 	for coord, chunk := range game.ChunkCache.Active {

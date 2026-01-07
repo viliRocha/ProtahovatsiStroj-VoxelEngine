@@ -2,7 +2,6 @@
 
 // Input vertex attributes
 in vec3 vertexPosition;
-in vec2 vertexTexCoord;
 in vec3 vertexNormal;
 in vec4 vertexColor;
 
