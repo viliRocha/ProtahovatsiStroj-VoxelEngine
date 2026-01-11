@@ -72,9 +72,14 @@ var BlockTypes = map[string]BlockProperties{
 	},
 }
 
+type TurtleState struct {
+	Position  rl.Vector3
+	Direction rl.Vector3
+}
+
 // Generate vegetation at random surface positions
-func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool) {
-	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool, p1, p2 *perlin.Perlin) {
+	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reusePlants && oldPlants != nil {
 		for _, plant := range oldPlants {
@@ -97,25 +102,22 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.Plant
 		x := rand.Intn(pkg.ChunkSize)
 		z := rand.Intn(pkg.ChunkSize)
 
-		// Iterate from the top to the bottom of the chunk to find the surface
-		for y := pkg.ChunkSize - 1; y >= 0; y-- {
+		height := calculateHeight(chunkPos, x, z, p1, p2)
 
-			// Ensure plants are only placed above layer 13 (water)
-			if chunk.Voxels[x][y][z].Type == "Grass" && y+1 < pkg.ChunkSize && chunk.Voxels[x][y+1][z].Type == "Air" && y > waterLevel {
-
-				// Randomly define a model for the plant
-				randomModel := rand.Intn(4) // 0 - 3
-				chunk.Voxels[x][y+1][z] = pkg.VoxelData{
-					Type:  "Plant",
-					Model: pkg.PlantModels[randomModel],
-				}
-				plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(y+1), chunkPos.Z+float32(z))
-				chunk.Plants = append(chunk.Plants, pkg.PlantData{
-					Position: plantPos,
-					ModelID:  randomModel,
-				})
-				break
+		// Ensure plants are only placed above layer 13 (water)
+		if chunk.Voxels[x][height][z].Type == "Grass" && chunk.Voxels[x][height+1][z].Type == "Air" && height > waterLevel {
+			// Randomly define a model for the plant
+			randomModel := rand.Intn(4) // 0 - 3
+			chunk.Voxels[x][height+1][z] = pkg.VoxelData{
+				Type:  "Plant",
+				Model: pkg.PlantModels[randomModel],
 			}
+			plantPos := rl.NewVector3(chunkPos.X+float32(x), float32(height+1), chunkPos.Z+float32(z))
+			chunk.Plants = append(chunk.Plants, pkg.PlantData{
+				Position: plantPos,
+				ModelID:  randomModel,
+			})
+			break
 		}
 	}
 }
@@ -146,7 +148,7 @@ func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 }
 
 func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string) {
-	stack := []rl.Vector3{position} // Array to hold both position and direction
+	stack := []TurtleState{}
 	currentPos := position
 	direction := rl.Vector3{0, 1, 0} //	Initial direction (upwards)
 
@@ -181,11 +183,13 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 			direction = rl.Vector3{0, 0, -1}
 
 		case '[': // Save the current position and direction
-			stack = append(stack, currentPos)
+			stack = append(stack, TurtleState{Position: currentPos, Direction: direction})
 
 		case ']': // Restore the last saved position
-			currentPos = stack[len(stack)-1]
+			state := stack[len(stack)-1]
 			stack = stack[:len(stack)-1] //	Removes the last item from the stack
+			currentPos = state.Position
+			direction = state.Direction
 
 		case 'A': // Create simple branch (diagonal movement without rotation)
 			// Checks if the next character is '('
@@ -250,8 +254,8 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
-	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool, p1, p2 *perlin.Perlin) {
+	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
 		for _, tree := range oldTrees {
@@ -269,23 +273,20 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 		x := rand.Intn(pkg.ChunkSize)
 		z := rand.Intn(pkg.ChunkSize)
 
-		// Iterate over the chunk to find the surface height of the terrain
-		surfaceY := -1
-		for y := pkg.ChunkSize - 1; y >= 0; y-- {
-			if chunk.Voxels[x][y][z].Type != "Grass" {
-				continue
-			}
-			surfaceY = y
-			break
+		// find the surface
+		height := calculateHeight(chunkOrigin, x, z, p1, p2)
+
+		if chunk.Voxels[x][height][z].Type != "Grass" {
+			continue
 		}
 
 		// Make sure the surface is valid and not in the water
-		if surfaceY < waterLevel {
+		if height < waterLevel {
 			continue
 		}
 		treePosGlobal := rl.NewVector3(
 			chunkOrigin.X+float32(x),
-			chunkOrigin.Y+float32(surfaceY+1),
+			chunkOrigin.Y+float32(height+1),
 			chunkOrigin.Z+float32(z),
 		)
 
@@ -299,11 +300,28 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 	}
 }
 
-func genWaterFormations(chunk *pkg.Chunk) {
-	waterLevel := int(float64(pkg.ChunkSize) * pkg.WaterLevelFraction)
+func genClouds(chunk *pkg.Chunk, position rl.Vector3, p *perlin.Perlin) {
+	y := pkg.WorldHeight - 2
+	threshold := 0.05 // Intensity of the cloud formation
+	cloudFrequency := 0.05
 
-	// Creates a Perlin Noise generator
-	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
+	for x := 0; x < pkg.ChunkSize; x++ {
+		for z := 0; z < pkg.ChunkSize; z++ {
+			// Global coordinates
+			globalX := int(position.X) + x
+			globalZ := int(position.Z) + z
+
+			noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
+
+			if noise > threshold {
+				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Cloud"}
+			}
+		}
+	}
+}
+
+func genLakeFormations(chunk *pkg.Chunk) {
+	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {
@@ -318,28 +336,35 @@ func genWaterFormations(chunk *pkg.Chunk) {
 				}
 			}
 
-			// Only generates sand near the water's surface
-			for y := topWaterY - 2; y <= topWaterY+1; y++ {
-				// Checks adjacent blocks for generating sand
-				for dy := -3; dy <= 1; dy++ {
-					for dx := -3; dx <= 3; dx++ {
-						adjX := x + dx
-						adjZ := z + dy
+			genSandFormations(chunk, topWaterY, x, z)
+		}
+	}
+}
 
-						//  adjX and adjZ >= 0 ensures that it does not access negative indices.
-						//  adjX and adjZ < pkg.ChunkSize ensures that it does not exceed the chunk size.
-						if adjX < 0 || adjX >= pkg.ChunkSize || adjZ < 0 || adjZ >= pkg.ChunkSize {
-							continue
-						}
-						// Generate a Perlin Noise value
-						noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
-						voxel := chunk.Voxels[adjX][y][adjZ].Type
+func genSandFormations(chunk *pkg.Chunk, ylevel, x, z int) {
+	// Creates a Perlin Noise generator
+	perlinNoise := perlin.NewPerlin(2, 2, 4, 0)
 
-						// Replaces dirt and grass with sand
-						if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
-							chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
-						}
-					}
+	// Only generates sand near the water's surface
+	for y := ylevel - 2; y <= ylevel+1; y++ {
+		// Checks adjacent blocks for generating sand
+		for dy := -3; dy <= 1; dy++ {
+			for dx := -3; dx <= 3; dx++ {
+				adjX := x + dx
+				adjZ := z + dy
+
+				//  adjX and adjZ >= 0 ensures that it does not access negative indices.
+				//  adjX and adjZ < pkg.ChunkSize ensures that it does not exceed the chunk size.
+				if adjX < 0 || adjX >= pkg.ChunkSize || adjZ < 0 || adjZ >= pkg.ChunkSize {
+					continue
+				}
+				// Generate a Perlin Noise value
+				noiseValue := perlinNoise.Noise2D(float64(adjX)/8, float64(adjZ)/8)
+				voxel := chunk.Voxels[adjX][y][adjZ].Type
+
+				// Replaces dirt and grass with sand
+				if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
+					chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
 				}
 			}
 		}

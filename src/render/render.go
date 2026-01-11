@@ -21,7 +21,7 @@ func RenderVoxels(game *load.Game) {
 		// Converts chunk coordinate to actual position
 		chunkPos := rl.NewVector3(
 			float32(coord.X*pkg.ChunkSize),
-			float32(coord.Y*pkg.ChunkSize),
+			0,
 			float32(coord.Z*pkg.ChunkSize),
 		)
 
@@ -41,7 +41,7 @@ func RenderVoxels(game *load.Game) {
 	for coord, chunk := range game.ChunkCache.Active {
 		chunkPos := rl.NewVector3(
 			float32(coord.X*pkg.ChunkSize),
-			float32(coord.Y*pkg.ChunkSize),
+			0,
 			float32(coord.Z*pkg.ChunkSize),
 		)
 
@@ -62,7 +62,7 @@ func RenderVoxels(game *load.Game) {
 	for coord, chunk := range game.ChunkCache.Active {
 		chunkPos := rl.NewVector3(
 			float32(coord.X*pkg.ChunkSize),
-			float32(coord.Y*pkg.ChunkSize),
+			0,
 			float32(coord.Z*pkg.ChunkSize),
 		)
 
@@ -119,18 +119,18 @@ func RenderVoxels(game *load.Game) {
 }
 
 func applyUnderwaterEffect(game *load.Game) {
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) + 1
+	waterLevel := int(float64(pkg.WorldHeight)*pkg.WaterLevelFraction) + 1
 
 	coord := world.ToChunkCoord(game.Camera.Position)
 	chunk := game.ChunkCache.Active[coord]
 
 	if chunk != nil {
 		localX := int(game.Camera.Position.X) - coord.X*pkg.ChunkSize
-		localY := int(game.Camera.Position.Y) - coord.Y*pkg.ChunkSize
+		localY := int(game.Camera.Position.Y) - coord.Y*pkg.WorldHeight
 		localZ := int(game.Camera.Position.Z) - coord.Z*pkg.ChunkSize
 
 		if localX >= 0 && localX < pkg.ChunkSize &&
-			localY >= 0 && localY < pkg.ChunkSize &&
+			localY >= 0 && localY < pkg.WorldHeight &&
 			localZ >= 0 && localZ < pkg.ChunkSize {
 
 			voxel := chunk.Voxels[localX][localY][localZ]

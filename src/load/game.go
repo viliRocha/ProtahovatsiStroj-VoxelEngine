@@ -49,7 +49,7 @@ func InitGame() Game {
 		Fovy:       45.0,
 		Projection: rl.CameraPerspective,
 	}
-	cameraMode := rl.CameraFirstPerson
+	cameraMode := rl.CameraFree
 
 	// Initializes Perlin noise
 	seed1 := rand.Int63()
@@ -91,7 +91,7 @@ func InitGame() Game {
 	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
-	chunkCache.Active[originCoord] = world.GenerateTerrainChunk(originPos, perlin1, perlin2, chunkCache, nil, false, nil, false)
+	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, chunkCache, nil, false, nil, false)
 
 	rl.SetTargetFPS(120)
 

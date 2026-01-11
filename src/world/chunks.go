@@ -45,7 +45,7 @@ func NewChunkCache() *ChunkCache {
 func ToChunkCoord(pos rl.Vector3) ChunkCoord {
 	return ChunkCoord{
 		X: int(math.Floor(float64(pos.X) / float64(pkg.ChunkSize))),
-		Y: int(math.Floor(float64(pos.Y) / float64(pkg.ChunkSize))),
+		Y: 0, //	Fixed Height
 		Z: int(math.Floor(float64(pos.Z) / float64(pkg.ChunkSize))),
 	}
 }
@@ -61,21 +61,16 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2 *perlin.Perlin) *pkg.
 
 	var newChunk *pkg.Chunk
 
-	if int(position.Y) == 0 {
-		if exists {
-			newChunk = GenerateTerrainChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
-		} else {
-			// First time the chunk is generated
-			// If there are saved plants, reuse them; if not, create new ones
-			if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
-				newChunk = GenerateTerrainChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
-			} else {
-				newChunk = GenerateTerrainChunk(position, p1, p2, cc, nil, false, nil, false)
-			}
-		}
+	if exists {
+		newChunk = GenerateChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
 	} else {
-		//newChunk = GenerateUndergroundChunk(position, p)
-		newChunk = GenerateAerialChunk(position, p1, cc)
+		// First time the chunk is generated
+		// If there are saved plants, reuse them; if not, create new ones
+		if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
+			newChunk = GenerateChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
+		} else {
+			newChunk = GenerateChunk(position, p1, p2, cc, nil, false, nil, false)
+		}
 	}
 
 	newChunk.IsOutdated = true // reset flag after reconstruction --> ensures that the mesh is rebuilt and the plant voxels are reapplied
@@ -120,7 +115,6 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 
 	for coord := range cc.Active {
 		if Abs(coord.X-playerCoord.X) > chDist ||
-			Abs(coord.Y-playerCoord.Y) > chDist ||
 			Abs(coord.Z-playerCoord.Z) > chDist {
 			delete(cc.Active, coord)
 			// DO NOT delete cc.PlantsCache[coord] — plants remain stored
@@ -150,24 +144,22 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2 *per
 	// Send the chunk positions to be loaded
 	for x := playerCoord.X - pkg.ChunkDistance; x <= playerCoord.X+pkg.ChunkDistance; x++ {
 		for z := playerCoord.Z - pkg.ChunkDistance; z <= playerCoord.Z+pkg.ChunkDistance; z++ {
-			for y := playerCoord.Y - pkg.ChunkDistance; y <= playerCoord.Y+pkg.ChunkDistance; y++ {
-				if chunksQueued >= MaxChunksPerFrame {
-					break
-				}
+			if chunksQueued >= MaxChunksPerFrame {
+				break
+			}
 
-				coord := ChunkCoord{X: x, Y: y, Z: z}
+			coord := ChunkCoord{X: x, Y: 0, Z: z}
 
-				// Allow aerial chunks to load if there are pending writes for them
-				chunkCache.CacheMutex.RLock()
-				chunk, exists := chunkCache.Active[coord]
-				chunkCache.CacheMutex.RUnlock()
+			// Allow aerial chunks to load if there are pending writes for them
+			chunkCache.CacheMutex.RLock()
+			chunk, exists := chunkCache.Active[coord]
+			chunkCache.CacheMutex.RUnlock()
 
-				if !exists || (chunk != nil && chunk.IsOutdated) {
-					chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), float32(y*pkg.ChunkSize), float32(z*pkg.ChunkSize))
+			if !exists || (chunk != nil && chunk.IsOutdated) {
+				chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
 
-					chunkRequests <- chunkPos
-					chunksQueued++
-				}
+				chunkRequests <- chunkPos
+				chunksQueued++
 			}
 		}
 	}
@@ -180,12 +172,12 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2 *per
 
 	// Updates neighbors
 	chunkCache.CacheMutex.Lock()
-	// Ensures that each chunk on the chunkCache.chunks map has up-to-date references to its neighboring chunks in all directions
+	// Ensures that each chunk on the chunkCache.chunks map has up-to-date references to its neighboring chunks on X and Z directions
 	for coord, chunk := range chunkCache.Active {
-		for i, direction := range pkg.FaceDirections {
+		for i, direction := range pkg.HorizontalDirections {
 			neighborCoord := ChunkCoord{
 				X: coord.X + int(direction.X),
-				Y: coord.Y + int(direction.Y),
+				Y: 0,
 				Z: coord.Z + int(direction.Z),
 			}
 			if neighbor, exists := chunkCache.Active[neighborCoord]; exists {
@@ -221,11 +213,11 @@ func setVoxelGlobal(chunkCache *ChunkCache, globalPos rl.Vector3, voxel pkg.Voxe
 
 	// math.Floor prevents inconsistent rounding that throws blocks into the wrong chunk
 	localX := int(math.Floor(float64(globalPos.X))) - coord.X*pkg.ChunkSize
-	localY := int(math.Floor(float64(globalPos.Y))) - coord.Y*pkg.ChunkSize
+	localY := int(math.Floor(float64(globalPos.Y)))
 	localZ := int(math.Floor(float64(globalPos.Z))) - coord.Z*pkg.ChunkSize
 
 	if localX < 0 && localX >= pkg.ChunkSize &&
-		localY < 0 && localY >= pkg.ChunkSize &&
+		localY < 0 && localY >= pkg.WorldHeight &&
 		localZ < 0 && localZ >= pkg.ChunkSize {
 		return
 	}

@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.11.4
+### v0.11.6
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -16,6 +16,8 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Improved Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes depending on the terrain.
+- **Dynamic Weather & Time Cycle**: Add a day/night cycle and weather effects such as rain and snow.
+- **Game Settings**: Create a menu where players can configure game features such as view distance, FPS limits, and world rules (weather, day/night cycle and cloud height).
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️
@@ -25,6 +27,11 @@ A voxel engine built using **raylib-go** and **OpenGL**
 
 ## Getting Started 🚀
 To get started with the voxel engine, clone the repository and open the folder. Make sure you have Go installed on your device. Then, run the command `go mod tidy` and finally, to compile the project, run `go run ./src`.
+
+## Controls 🎮
+- **Mouse Left Button**: Lock cursor.
+- **Camera**: WASD movement, mouse to look.
+- **Esc**: To close the window.
 
 ## License 📄
 This project is licensed under the MIT License - see the `LICENSE` file for details.

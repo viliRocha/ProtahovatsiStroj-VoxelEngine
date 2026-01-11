@@ -8,8 +8,6 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-var maxTerrainHeight = 256
-
 var treeModels = []string{
 	"F=F[FA(3)L][FA(3)L][FA(3)L]A(3)",
 	"F=F[F+A(5)L][−A(5)L][/A(4)L][\\A(4)L]",
@@ -24,49 +22,21 @@ func chooseRandomTree() string {
 	//return "F=F[FA(2)L]F[+A(3)L]F[−A(3)L]F[/A(2)L]F[\\A(2)L]A(3)"
 }
 
-func GenerateAerialChunk(position rl.Vector3, p *perlin.Perlin, chunkCache *ChunkCache) *pkg.Chunk {
-	chunk := &pkg.Chunk{}
-
-	localY := 30      // Cloud height
-	threshold := 0.05 // Intensity of the cloud formation
-	cloudFrequency := 0.05
-
-	// It only generates clouds if this is the first aerial chunk
-	if int(position.Y) == pkg.ChunkSize {
-		for x := 0; x < pkg.ChunkSize; x++ {
-			for z := 0; z < pkg.ChunkSize; z++ {
-				// Global coordinates
-				globalX := int(position.X) + x
-				globalZ := int(position.Z) + z
-
-				noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
-
-				if noise > threshold {
-					chunk.Voxels[x][localY][z] = pkg.VoxelData{Type: "Cloud"}
-				}
-			}
-		}
-	}
-
-	chunk.IsOutdated = true
-	return chunk
-}
-
-func GenerateTerrainChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *ChunkCache, oldPlants []pkg.PlantData, reusePlants bool, oldTrees []pkg.TreeData, reuseTrees bool) *pkg.Chunk {
+func GenerateChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *ChunkCache, oldPlants []pkg.PlantData, reusePlants bool, oldTrees []pkg.TreeData, reuseTrees bool) *pkg.Chunk {
 	chunk := &pkg.Chunk{
 		Plants: []pkg.PlantData{},
 		Trees:  []pkg.TreeData{},
 	}
 
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 1
+	waterLevel := int(float64(pkg.WorldHeight)*pkg.WaterLevelFraction) - 1
 
 	for x := range pkg.ChunkSize {
 		for z := range pkg.ChunkSize {
 
 			// Use Perlin noise to generate the height of the terrain
-			height := calculateHeight(position, p1, p2, x, z)
+			height := calculateHeight(position, x, z, p1, p2)
 
-			for y := range pkg.ChunkSize {
+			for y := range pkg.WorldHeight {
 				isSolid := y <= height
 
 				if isSolid {
@@ -88,12 +58,14 @@ func GenerateTerrainChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache
 	}
 	// Add water to specific layer
 	if int(position.Y) == 0 {
-		genWaterFormations(chunk)
+		genLakeFormations(chunk)
 	}
 
 	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, oldPlants, reusePlants)
-	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees)
+	generatePlants(chunk, position, oldPlants, reusePlants, p1, p2)
+	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees, p1, p2)
+
+	genClouds(chunk, position, p1)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true
@@ -101,25 +73,24 @@ func GenerateTerrainChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache
 	return chunk
 }
 
-func calculateHeight(position rl.Vector3, p1, p2 *perlin.Perlin, globalX, globalZ int) int {
-	mountainFreq := 0.01
-	detailsFreq := 0.07
+func calculateHeight(position rl.Vector3, x, z int, p1, p2 *perlin.Perlin) int {
+	mountainFreq := 0.008
+	detailsFreq := 0.05
 
-	// Amplitudes diferentes
 	amp1 := 1.5
 	amp2 := 0.2
 
-	n1 := p1.Noise2D(float64(position.X+float32(globalX))*mountainFreq, float64(position.Z+float32(globalZ))*mountainFreq)
-	n2 := p2.Noise2D(float64(position.X+float32(globalX))*detailsFreq, float64(position.Z+float32(globalZ))*detailsFreq)
+	n1 := p1.Noise2D(float64(position.X+float32(x))*mountainFreq, float64(position.Z+float32(z))*mountainFreq)
+	n2 := p2.Noise2D(float64(position.X+float32(x))*detailsFreq, float64(position.Z+float32(z))*detailsFreq)
 
-	// Combina os dois (pode ser soma, média, ou outra função)
+	// Combines both (can be done with sum, average, or another function)
 	combined := (n1*amp1 + n2*amp2) / (amp1 + amp2)
 
-	return int((combined + 1.0) / 2.0 * float64(pkg.ChunkSize)) // Normalizes the noise value to [0, chunkSize]
+	return int((combined + 1.0) / 2.0 * float64(pkg.WorldHeight)) // Normalizes the noise value to [0, chunkSize]
 }
 
 // 3D perlin noise generation for cave systems
-func GenerateUndergroundChunk(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
+func GenerateCaves(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
 	chunk := &pkg.Chunk{}
 
 	frequency := 0.04

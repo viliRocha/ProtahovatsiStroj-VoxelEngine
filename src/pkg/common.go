@@ -7,7 +7,7 @@ import (
 var PlantModels [4]rl.Model
 
 const (
-	ChunkHeight        int     = 80
+	WorldHeight        int     = 96
 	ChunkSize          int     = 32
 	ChunkDistance      int     = 3
 	WaterLevelFraction float64 = 0.375 // 3/8
@@ -45,8 +45,8 @@ type TransparentItem struct {
 
 type Chunk struct {
 	//Materials rl.Material
-	Voxels    [ChunkSize][ChunkSize][ChunkSize]VoxelData
-	Neighbors [6]*Chunk // 0: +X, 1: -X, 2: +Y, 3: -Y, 4: +Z, 5: -Z
+	Voxels    [ChunkSize][WorldHeight][ChunkSize]VoxelData
+	Neighbors [4]*Chunk // 0: +X, 1: -X, 2: 4: +Z, 5: -Z
 	Plants    []PlantData
 	Trees     []TreeData
 
@@ -77,6 +77,13 @@ var FaceDirections = []rl.Vector3{
 	{0, -1, 0}, // Right
 	{0, 0, 1},  // Top
 	{0, 0, -1}, // Bottom
+}
+
+var HorizontalDirections = []rl.Vector3{
+	{1, 0, 0},
+	{-1, 0, 0},
+	{0, 0, 1},
+	{0, 0, -1},
 }
 
 var FaceVertices = [6][4][3]float32{

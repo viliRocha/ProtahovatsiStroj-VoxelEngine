@@ -100,7 +100,7 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	 * (AI was used to help the interpretation of some of those docs)
 	 */
 
-	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
+	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.WorldHeight), int(pkg.ChunkSize)
 	for i := 0; i < Nx*Ny*Nz; i++ {
 		pos := pkg.Coords{
 			X: i / (Ny * Nz),
@@ -123,7 +123,7 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 		case "Water":
 			// only add if it's a surface
 			isSurface := true
-			if pos.Y+1 < pkg.ChunkSize {
+			if pos.Y+1 < pkg.WorldHeight {
 				above := chunk.Voxels[pos.X][pos.Y+1][pos.Z]
 				if above.Type == "Water" {
 					isSurface = false
@@ -346,17 +346,25 @@ func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
 	chunk.IsOutdated = false
 }
 
+var FaceToChunkNeighbor = map[int]int{
+	0: 0, // +X → neighbor[0]
+	1: 1, // -X → neighbor[1]
+	4: 2, // +Z → neighbor[2]
+	5: 3, // -Z → neighbor[3]
+	// 2 (+Y) e 3 (-Y) não têm vizinhos
+}
+
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 	direction := pkg.FaceDirections[faceIndex]
 	maxSize := int(pkg.ChunkSize - 1)
-	maxHeight := int(pkg.ChunkSize) - 1
+	maxHeight := int(pkg.WorldHeight - 1)
 
 	// Calculates the new coordinates based on the face direction
 	nx := pos.X + int(direction.X)
 	ny := pos.Y + int(direction.Y)
 	nz := pos.Z + int(direction.Z)
 
-	// Checks if the new coordinates are within the chunk bounds
+	// Case 1: Checks if the new coordinates are within the chunk bounds and does not render internal voxels
 	if nx >= 0 && nx <= maxSize &&
 		ny >= 0 && ny <= maxHeight &&
 		nz >= 0 && nz <= maxSize {
@@ -364,16 +372,41 @@ func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 		return !world.BlockTypes[voxelType].IsSolid
 	}
 
-	// Outside chunk boundries → depends on the neighbor
-	neighbor := chunk.Neighbors[faceIndex]
+	// Case 2: vertical faces (do not have chunk neighbors)
+	if faceIndex == 2 {
+		// +Y (topo)
+		return true
+	}
+	if faceIndex == 3 {
+		// -Y (fundo)
+		return false
+	}
+
+	// Case 3: Outside chunk boundries → depends on the neighbor
+	var neighborIdx int
+	switch faceIndex {
+	case 0:
+		neighborIdx = 0 // +X
+	case 1:
+		neighborIdx = 1 // -X
+	case 4:
+		neighborIdx = 2 // +Z
+	case 5:
+		neighborIdx = 3 // -Z
+	}
+
+	neighbor := chunk.Neighbors[neighborIdx]
 	if neighbor == nil {
 		return true // no neighbor → exposed face
 	}
 
 	// Adjusts coordinates relative to the neighbor.
 	nx = (nx + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
-	ny = (ny + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
 	nz = (nz + int(pkg.ChunkSize)) % int(pkg.ChunkSize)
+
+	if ny < 0 || ny > maxHeight {
+		return true
+	}
 
 	voxelType := neighbor.Voxels[nx][ny][nz].Type
 	return !world.BlockTypes[voxelType].IsSolid
