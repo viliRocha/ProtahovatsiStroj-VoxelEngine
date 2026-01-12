@@ -78,7 +78,7 @@ type TurtleState struct {
 }
 
 // Generate vegetation at random surface positions
-func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool, p1, p2 *perlin.Perlin) {
+func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool, p1, p2, p3 *perlin.Perlin) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reusePlants && oldPlants != nil {
@@ -102,10 +102,16 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.Plant
 		x := rand.Intn(pkg.ChunkSize)
 		z := rand.Intn(pkg.ChunkSize)
 
-		height := calculateHeight(chunkPos, x, z, p1, p2)
+		height := calculateHeight(chunkPos, x, z, p1, p2, p3)
+
+		if height < 0 || height+1 >= pkg.WorldHeight {
+			continue // ignore invalid positions
+		}
 
 		// Ensure plants are only placed above layer 13 (water)
-		if chunk.Voxels[x][height][z].Type == "Grass" && chunk.Voxels[x][height+1][z].Type == "Air" && height > waterLevel {
+		if chunk.Voxels[x][height][z].Type == "Grass" &&
+			chunk.Voxels[x][height+1][z].Type == "Air" &&
+			height > waterLevel {
 			// Randomly define a model for the plant
 			randomModel := rand.Intn(4) // 0 - 3
 			chunk.Voxels[x][height+1][z] = pkg.VoxelData{
@@ -117,7 +123,6 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.Plant
 				Position: plantPos,
 				ModelID:  randomModel,
 			})
-			break
 		}
 	}
 }
@@ -161,13 +166,21 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 
 		switch char {
 		case 'F': // Create wood blocks for tree tunks
-			setVoxelGlobal(chunkCache, currentPos, pkg.VoxelData{Type: "Wood"})
+
+			if currentPos.Y >= 0 && int(currentPos.Y) < pkg.WorldHeight {
+				setVoxelGlobal(chunkCache, currentPos, pkg.VoxelData{Type: "Wood"})
+			}
 
 			// Moving in the current direction
 			currentPos = rl.Vector3{
 				currentPos.X + direction.X,
 				currentPos.Y + direction.Y,
 				currentPos.Z + direction.Z,
+			}
+
+			//	if the structure left the world, interrupt
+			if int(currentPos.Y) < 0 || int(currentPos.Y) >= pkg.WorldHeight {
+				return
 			}
 
 		case '+': // Turn right (around the Y-axis)
@@ -247,14 +260,16 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 				ly := currentPos.Y + float32(rand.Intn(2)) // variação vertical)
 				lz := currentPos.Z + float32(radius*math.Sin(angle))
 
-				leafPos := rl.Vector3{lx, ly, lz}
-				setVoxelGlobal(chunkCache, leafPos, pkg.VoxelData{Type: "Leaves"})
+				if int(ly) >= 0 && int(ly) < pkg.WorldHeight {
+					leafPos := rl.Vector3{lx, ly, lz}
+					setVoxelGlobal(chunkCache, leafPos, pkg.VoxelData{Type: "Leaves"})
+				}
 			}
 		}
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool, p1, p2 *perlin.Perlin) {
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool, p1, p2, p3 *perlin.Perlin) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
@@ -274,7 +289,11 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 		z := rand.Intn(pkg.ChunkSize)
 
 		// find the surface
-		height := calculateHeight(chunkOrigin, x, z, p1, p2)
+		height := calculateHeight(chunkOrigin, x, z, p1, p2, p3)
+
+		if height < 0 || height >= pkg.WorldHeight {
+			continue
+		}
 
 		if chunk.Voxels[x][height][z].Type != "Grass" {
 			continue

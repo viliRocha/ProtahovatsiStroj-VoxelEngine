@@ -2,6 +2,7 @@ package world
 
 import (
 	"go-engine/src/pkg"
+	"math"
 	"math/rand"
 
 	"github.com/aquilax/go-perlin"
@@ -22,11 +23,17 @@ func chooseRandomTree() string {
 	//return "F=F[FA(2)L]F[+A(3)L]F[−A(3)L]F[/A(2)L]F[\\A(2)L]A(3)"
 }
 
-func GenerateChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *ChunkCache, oldPlants []pkg.PlantData, reusePlants bool, oldTrees []pkg.TreeData, reuseTrees bool) *pkg.Chunk {
+func GenerateChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin, chunkCache *ChunkCache, oldPlants []pkg.PlantData, reusePlants bool, oldTrees []pkg.TreeData, reuseTrees bool) *pkg.Chunk {
 	chunk := &pkg.Chunk{
 		Plants: []pkg.PlantData{},
 		Trees:  []pkg.TreeData{},
 	}
+
+	// registra o chunk em Active antes de gerar cavernas
+	coord := ToChunkCoord(position)
+	chunkCache.CacheMutex.Lock()
+	chunkCache.Active[coord] = chunk
+	chunkCache.CacheMutex.Unlock()
 
 	waterLevel := int(float64(pkg.WorldHeight)*pkg.WaterLevelFraction) - 1
 
@@ -34,7 +41,7 @@ func GenerateChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *Chunk
 		for z := range pkg.ChunkSize {
 
 			// Use Perlin noise to generate the height of the terrain
-			height := calculateHeight(position, x, z, p1, p2)
+			height := calculateHeight(position, x, z, p1, p2, p3)
 
 			for y := range pkg.WorldHeight {
 				isSolid := y <= height
@@ -61,11 +68,13 @@ func GenerateChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *Chunk
 		genLakeFormations(chunk)
 	}
 
-	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, oldPlants, reusePlants, p1, p2)
-	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees, p1, p2)
+	genCaves(chunkCache, position, p1, p2, p3)
 
-	genClouds(chunk, position, p1)
+	//  Generate the plants after the terrain generation
+	generatePlants(chunk, position, oldPlants, reusePlants, p1, p2, p3)
+	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees, p1, p2, p3)
+
+	//genClouds(chunk, position, p1)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true
@@ -73,108 +82,107 @@ func GenerateChunk(position rl.Vector3, p1, p2 *perlin.Perlin, chunkCache *Chunk
 	return chunk
 }
 
-func calculateHeight(position rl.Vector3, x, z int, p1, p2 *perlin.Perlin) int {
-	mountainFreq := 0.008
-	detailsFreq := 0.05
+func calculateHeight(position rl.Vector3, x, z int, p1, p2, p3 *perlin.Perlin) int {
+	baseFreq := 0.002
+	mountainFreq := 0.09
+	detailsFreq := 0.01
 
-	amp1 := 1.5
-	amp2 := 0.2
+	ampl1 := 1.2
+	ampl2 := 1.0
+	ampl3 := 0.1
 
-	n1 := p1.Noise2D(float64(position.X+float32(x))*mountainFreq, float64(position.Z+float32(z))*mountainFreq)
-	n2 := p2.Noise2D(float64(position.X+float32(x))*detailsFreq, float64(position.Z+float32(z))*detailsFreq)
+	bx := float64(position.X + float32(x))
+	bz := float64(position.Z + float32(z))
+
+	n1 := p1.Noise2D(bx*baseFreq, bz*baseFreq) // controls plains and depressions
+	n2 := p2.Noise2D(bx*mountainFreq, bz*mountainFreq)
+	n3 := p3.Noise2D(bx*detailsFreq, bz*detailsFreq)
+
+	// Narrower mountains
+	n2 = math.Pow(math.Abs(n2), 4)
 
 	// Combines both (can be done with sum, average, or another function)
-	combined := (n1*amp1 + n2*amp2) / (amp1 + amp2)
+	combined := n1*ampl1 + n2*ampl2 + n3*ampl3
 
-	return int((combined + 1.0) / 2.0 * float64(pkg.WorldHeight)) // Normalizes the noise value to [0, chunkSize]
+	return int((combined + 1.0) / 2.0 * float64((pkg.WorldHeight - 16))) // Normalizes the noise value to [0, worldHeight - 16]
 }
 
-// 3D perlin noise generation for cave systems
-func GenerateCaves(position rl.Vector3, p *perlin.Perlin) *pkg.Chunk {
-	chunk := &pkg.Chunk{}
+// Perlin worms using 3D perlin noise
+func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, p1, p2, p3 *perlin.Perlin) {
+	steps := 200 + rand.Intn(801)
+	freq := 0.02
+	radius := 2
+	generationAttempt := 2 + rand.Intn(pkg.ChunkSize/2)
 
-	frequency := 0.04
+	for i := 0; i < generationAttempt; i++ {
+		x := rand.Intn(pkg.ChunkSize)
+		z := rand.Intn(pkg.ChunkSize)
 
-	threshold := 0.1 // Minimum density to be solid
+		// find the surface
+		surface := calculateHeight(chunkOrigin, x, z, p1, p2, p3)
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for z := 0; z < pkg.ChunkSize; z++ {
-			for y := 0; y < pkg.ChunkSize; y++ {
-				// Global coordinates
-				globalX := int(position.X) + x
-				globalY := int(position.Y) + y
-				globalZ := int(position.Z) + z
+		pos := rl.NewVector3(chunkOrigin.X+float32(x), float32(surface), chunkOrigin.Z+float32(z))
 
-				// 3D noise for density
-				noise := p.Noise3D(float64(globalX)*frequency, float64(globalY)*frequency, float64(globalZ)*frequency)
+		for step := 0; step < steps; step++ {
+			// direção guiada por Perlin
+			dx := float32(p1.Noise3D(float64(pos.X)*freq, float64(pos.Y)*freq, float64(pos.Z)*freq))
+			dy := float32(p1.Noise3D(float64(pos.X)*freq+100, float64(pos.Y)*freq+100, float64(pos.Z)*freq+100))
+			dz := float32(p1.Noise3D(float64(pos.X)*freq+200, float64(pos.Y)*freq+200, float64(pos.Z)*freq+200))
 
-				//	Threshold defines whether the voxel is solid
-				if noise > threshold {
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Stone"}
+			dir := rl.Vector3{dx, dy, dz}
+			// normaliza
+			length := float32(math.Sqrt(float64(dx*dx + dy*dy + dz*dz)))
+			//	Less influence of the Y axis
+			dir = rl.Vector3{dx / length, (dy / length) * 0.7, dz / length}
 
-				} else {
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+			// avança
+			pos = rl.Vector3{pos.X + dir.X, pos.Y + dir.Y, pos.Z + dir.Z}
+
+			// limite de profundidade
+			if pos.Y <= 1 {
+				break
+			}
+
+			// converte para chunk local
+			coord := ToChunkCoord(pos)
+			localX := int(pos.X) - coord.X*pkg.ChunkSize
+			localY := int(pos.Y)
+			localZ := int(pos.Z) - coord.Z*pkg.ChunkSize
+
+			// verifica se o chunk existe
+			chunkCache.CacheMutex.RLock()
+			targetChunk := chunkCache.Active[coord]
+			chunkCache.CacheMutex.RUnlock()
+
+			if targetChunk != nil {
+				carveSphere(targetChunk, localX, localY, localZ, radius)
+			} else {
+				chunkCache.CacheMutex.Lock()
+				chunkCache.PendingVoxels[coord] = append(chunkCache.PendingVoxels[coord],
+					PendingWrite{
+						Pos:   [3]int{localX, localY, localZ},
+						Voxel: pkg.VoxelData{Type: "Air"},
+					})
+				chunkCache.CacheMutex.Unlock()
+			}
+		}
+	}
+}
+
+// Função para esculpir uma esfera de ar (túnel)
+func carveSphere(chunk *pkg.Chunk, cx, cy, cz, radius int) {
+	for x := cx - radius; x <= cx+radius; x++ {
+		for y := cy - radius; y <= cy+radius; y++ {
+			for z := cz - radius; z <= cz+radius; z++ {
+				if x >= 0 && x < pkg.ChunkSize &&
+					y >= 0 && y < pkg.WorldHeight &&
+					z >= 0 && z < pkg.ChunkSize {
+					dx, dy, dz := x-cx, y-cy, z-cz
+					if dx*dx+dy*dy+dz*dz <= radius*radius {
+						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
+					}
 				}
 			}
 		}
 	}
-
-	// Marks the chunk as outdated so that the mesh can be generated
-	chunk.IsOutdated = true
-
-	return chunk
 }
-
-/*
-func calculateHeight(position rl.Vector3, p *perlin.Perlin, x, z int) int {
-	globalX := float64(position.X + float32(x))
-	globalZ := float64(position.Z + float32(z))
-
-	waterLevel := int(float64(pkg.ChunkSize)*pkg.WaterLevelFraction) - 2
-
-	// Continental map — define onde há terra vs oceano
-	continentFreq := 0.008
-	continentVal := p.Noise2D(globalX*continentFreq, globalZ*continentFreq)
-	continentVal = (continentVal + 1) / 2 // normaliza de [-1,1] pra [0,1]
-
-	// Transição costeira suave
-	if continentVal < 0.5 {
-		coastBlend := (continentVal - 0.4) / 0.1 // de 0 a 1
-		landBase := float64(waterLevel) + 2.0
-		oceanBase := 6 + continentVal*8.8
-		return int(oceanBase*(1-coastBlend) + landBase*coastBlend)
-	}
-
-	// Base do continente: levemente variada
-	baseFreq := 0.008
-	baseNoise := p.Noise2D(globalX*baseFreq, globalZ*baseFreq)
-	baseNoise = (baseNoise + 1) / 2.0 // [0,1]
-	baseHeight := float64(waterLevel) + baseNoise*10.0
-
-	// Cadeia de montanhas
-	// Ex: transformar vales profundos em picos estreitos
-	mountainNoise := p.Noise2D(globalX*0.02, globalZ*0.02)
-	mountainEffect := -math.Abs(mountainNoise) + 1.0 // pico em 1.0, vales em 0.0
-	mountainEffect = math.Pow(mountainEffect, 4)     // só picos agudos se elevam
-	mountainHeight := mountainEffect * 20.0          // até 20 blocos extras
-
-	// Elevação base dos continentes
-	finalHeight := baseHeight + mountainHeight*0.55
-
-	mountainMaskFreq := 0.015
-	mountainMask := p.Noise2D(globalX*mountainMaskFreq, globalZ*mountainMaskFreq)
-
-	//mountainHeight := 0.0
-	if mountainMask > 0.3 && baseNoise > 0.6 { // só algumas montanhas
-		mountainNoise := p.Noise2D(globalX*0.03, globalZ*0.03)
-		mountainEffect := math.Pow(-math.Abs(mountainNoise)+1.0, 4) // picos agudos
-		mountainHeight = mountainEffect * 18.0
-	}
-
-	// Altura final com base na chunk size
-	if finalHeight > float64(pkg.ChunkHeight-1) {
-		finalHeight = float64(pkg.ChunkHeight - 1)
-	}
-	return int(finalHeight)
-}
-*/

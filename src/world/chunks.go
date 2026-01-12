@@ -50,7 +50,7 @@ func ToChunkCoord(pos rl.Vector3) ChunkCoord {
 	}
 }
 
-func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2 *perlin.Perlin) *pkg.Chunk {
+func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin) *pkg.Chunk {
 	coord := ToChunkCoord(position)
 
 	cc.CacheMutex.RLock()
@@ -62,14 +62,14 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2 *perlin.Perlin) *pkg.
 	var newChunk *pkg.Chunk
 
 	if exists {
-		newChunk = GenerateChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
+		newChunk = GenerateChunk(position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
 	} else {
 		// First time the chunk is generated
 		// If there are saved plants, reuse them; if not, create new ones
 		if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
-			newChunk = GenerateChunk(position, p1, p2, cc, oldPlants, true, oldTrees, true)
+			newChunk = GenerateChunk(position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
 		} else {
-			newChunk = GenerateChunk(position, p1, p2, cc, nil, false, nil, false)
+			newChunk = GenerateChunk(position, p1, p2, p3, cc, nil, false, nil, false)
 		}
 	}
 
@@ -81,7 +81,11 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2 *perlin.Perlin) *pkg.
 	// applies pending issues after the core terrain generation so tree voxels aren’t overwritten.
 	if writes, ok := cc.PendingVoxels[coord]; ok {
 		for _, w := range writes {
-			newChunk.Voxels[w.Pos[0]][w.Pos[1]][w.Pos[2]] = w.Voxel
+			if w.Pos[0] >= 0 && w.Pos[0] < pkg.ChunkSize &&
+				w.Pos[1] >= 0 && w.Pos[1] < pkg.WorldHeight &&
+				w.Pos[2] >= 0 && w.Pos[2] < pkg.ChunkSize {
+				newChunk.Voxels[w.Pos[0]][w.Pos[1]][w.Pos[2]] = w.Voxel
+			}
 		}
 		newChunk.IsOutdated = true
 		delete(cc.PendingVoxels, coord)
@@ -122,7 +126,7 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 	}
 }
 
-func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2 *perlin.Perlin) {
+func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 *perlin.Perlin) {
 	playerCoord := ToChunkCoord(playerPosition)
 
 	chunkRequests := make(chan rl.Vector3, 100)
@@ -132,7 +136,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2 *per
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for cp := range chunkRequests {
-				chunkCache.GetChunk(cp, p1, p2)
+				chunkCache.GetChunk(cp, p1, p2, p3)
 			}
 			done <- struct{}{}
 		}()
@@ -216,9 +220,9 @@ func setVoxelGlobal(chunkCache *ChunkCache, globalPos rl.Vector3, voxel pkg.Voxe
 	localY := int(math.Floor(float64(globalPos.Y)))
 	localZ := int(math.Floor(float64(globalPos.Z))) - coord.Z*pkg.ChunkSize
 
-	if localX < 0 && localX >= pkg.ChunkSize &&
-		localY < 0 && localY >= pkg.WorldHeight &&
-		localZ < 0 && localZ >= pkg.ChunkSize {
+	if localX < 0 || localX >= pkg.ChunkSize ||
+		localY < 0 || localY >= pkg.WorldHeight ||
+		localZ < 0 || localZ >= pkg.ChunkSize {
 		return
 	}
 

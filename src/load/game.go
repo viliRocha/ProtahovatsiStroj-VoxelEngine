@@ -30,6 +30,7 @@ type Game struct {
 	ChunkCache *world.ChunkCache
 	Perlin1    *perlin.Perlin
 	Perlin2    *perlin.Perlin
+	Perlin3    *perlin.Perlin
 	FogShader  rl.Shader
 	AOShader   rl.Shader
 	//LightPosition rl.Vector3
@@ -43,7 +44,7 @@ func InitGame() Game {
 	rl.SetTraceLogLevel(rl.LogError)
 
 	camera := rl.Camera{
-		Position:   rl.NewVector3(2.79, 19.45, 10.0),
+		Position:   rl.NewVector3(2.79, 62.0, 10.0),
 		Target:     rl.NewVector3(0.0, 0.0, 0.0),
 		Up:         rl.NewVector3(0.0, 1.0, 0.0),
 		Fovy:       45.0,
@@ -54,9 +55,11 @@ func InitGame() Game {
 	// Initializes Perlin noise
 	seed1 := rand.Int63()
 	seed2 := rand.Int63()
+	seed3 := rand.Int63()
 
 	perlin1 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed1)
 	perlin2 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed2)
+	perlin3 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed3)
 
 	fogShader := rl.LoadShader("shaders/lighting.vs", "shaders/fog.fs")
 	//AOShader := rl.LoadShader("shaders/lighting.vs", "shaders/ao.fs")
@@ -91,9 +94,9 @@ func InitGame() Game {
 	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
-	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, chunkCache, nil, false, nil, false)
+	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)
 
-	rl.SetTargetFPS(120)
+	rl.SetTargetFPS(90)
 
 	return Game{
 		Camera:     camera,
@@ -101,6 +104,7 @@ func InitGame() Game {
 		ChunkCache: chunkCache,
 		Perlin1:    perlin1,
 		Perlin2:    perlin2,
+		Perlin3:    perlin3,
 		FogShader:  fogShader,
 		//AOShader:    AOShader,
 		//LightPosition: LightPosition,
