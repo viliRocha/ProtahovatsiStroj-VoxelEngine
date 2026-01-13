@@ -31,8 +31,7 @@ type Game struct {
 	Perlin1    *perlin.Perlin
 	Perlin2    *perlin.Perlin
 	Perlin3    *perlin.Perlin
-	FogShader  rl.Shader
-	AOShader   rl.Shader
+	Shader     rl.Shader
 	//LightPosition rl.Vector3
 }
 
@@ -61,17 +60,19 @@ func InitGame() Game {
 	perlin2 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed2)
 	perlin3 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed3)
 
-	fogShader := rl.LoadShader("shaders/lighting.vs", "shaders/fog.fs")
-	//AOShader := rl.LoadShader("shaders/lighting.vs", "shaders/ao.fs")
+	Shader := rl.LoadShader("shaders/lighting.vs", "shaders/fog.fs")
 
 	// Locations (do not index shader.Locs)
-	locFogDensity := rl.GetShaderLocation(fogShader, "fogDensity")
+	locFogDensity := rl.GetShaderLocation(Shader, "fogDensity")
 
 	// Fog density calculation
 	// Inverse relationship: more chunks → less fog
-	fogDensity := float32(0.027 * (1.0 / float32(pkg.ChunkDistance)))
+	fogDensity := float32(0.036 * (1.0 / float32(pkg.ChunkDistance)))
 	//fmt.Println(fogDensity)
-	rl.SetShaderValue(fogShader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
+	rl.SetShaderValue(Shader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
+
+	lightLoc := rl.GetShaderLocation(Shader, "lightDir")
+	rl.SetShaderValue(Shader, lightLoc, []float32{-1, -1, -0.5}, rl.ShaderUniformVec3)
 
 	// Load .vox models
 	for i := 0; i < len(pkg.PlantModels); i++ {
@@ -83,7 +84,7 @@ func InitGame() Game {
 			pkg.PlantModels[i].MaterialCount = 1
 			pkg.PlantModels[i].Materials = &def
 		}
-		(*pkg.PlantModels[i].Materials).Shader = fogShader
+		(*pkg.PlantModels[i].Materials).Shader = Shader
 	}
 
 	//LightPosition := rl.NewVector3(0, 5, 0)
@@ -96,7 +97,7 @@ func InitGame() Game {
 
 	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)
 
-	rl.SetTargetFPS(90)
+	rl.SetTargetFPS(100)
 
 	return Game{
 		Camera:     camera,
@@ -105,8 +106,7 @@ func InitGame() Game {
 		Perlin1:    perlin1,
 		Perlin2:    perlin2,
 		Perlin3:    perlin3,
-		FogShader:  fogShader,
-		//AOShader:    AOShader,
+		Shader:     Shader,
 		//LightPosition: LightPosition,
 	}
 }

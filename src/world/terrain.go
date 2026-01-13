@@ -29,7 +29,7 @@ func GenerateChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin, chunkCache *C
 		Trees:  []pkg.TreeData{},
 	}
 
-	// registra o chunk em Active antes de gerar cavernas
+	// Registers the chunk in Active before generating caves
 	coord := ToChunkCoord(position)
 	chunkCache.CacheMutex.Lock()
 	chunkCache.Active[coord] = chunk
@@ -68,13 +68,13 @@ func GenerateChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin, chunkCache *C
 		genLakeFormations(chunk)
 	}
 
-	genCaves(chunkCache, position, p1, p2, p3)
+	genCaves(chunkCache, position, waterLevel, p1, p2, p3)
 
 	//  Generate the plants after the terrain generation
 	generatePlants(chunk, position, oldPlants, reusePlants, p1, p2, p3)
 	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees, p1, p2, p3)
 
-	//genClouds(chunk, position, p1)
+	genClouds(chunk, position, p1)
 
 	// Marks the chunk as outdated so that the mesh can be generated
 	chunk.IsOutdated = true
@@ -108,11 +108,11 @@ func calculateHeight(position rl.Vector3, x, z int, p1, p2, p3 *perlin.Perlin) i
 }
 
 // Perlin worms using 3D perlin noise
-func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, p1, p2, p3 *perlin.Perlin) {
-	steps := 200 + rand.Intn(801)
-	freq := 0.02
+func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, waterLevel int, p1, p2, p3 *perlin.Perlin) {
+	steps := 200 + rand.Intn(601)
+	freq := 0.01
 	radius := 2
-	generationAttempt := 2 + rand.Intn(pkg.ChunkSize/2)
+	generationAttempt := rand.Intn(2)
 
 	for i := 0; i < generationAttempt; i++ {
 		x := rand.Intn(pkg.ChunkSize)
@@ -121,41 +121,55 @@ func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, p1, p2, p3 *perlin
 		// find the surface
 		surface := calculateHeight(chunkOrigin, x, z, p1, p2, p3)
 
+		if surface <= waterLevel {
+			continue //	Don't create caves next to waterBodies
+		}
+
 		pos := rl.NewVector3(chunkOrigin.X+float32(x), float32(surface), chunkOrigin.Z+float32(z))
 
 		for step := 0; step < steps; step++ {
-			// direção guiada por Perlin
+			// direction guided by the perlin
 			dx := float32(p1.Noise3D(float64(pos.X)*freq, float64(pos.Y)*freq, float64(pos.Z)*freq))
 			dy := float32(p1.Noise3D(float64(pos.X)*freq+100, float64(pos.Y)*freq+100, float64(pos.Z)*freq+100))
 			dz := float32(p1.Noise3D(float64(pos.X)*freq+200, float64(pos.Y)*freq+200, float64(pos.Z)*freq+200))
 
 			dir := rl.Vector3{dx, dy, dz}
-			// normaliza
+			// normalize
 			length := float32(math.Sqrt(float64(dx*dx + dy*dy + dz*dz)))
 			//	Less influence of the Y axis
-			dir = rl.Vector3{dx / length, (dy / length) * 0.7, dz / length}
+			dir = rl.Vector3{dx / length, (dy / length) * 0.8, dz / length}
 
 			// avança
 			pos = rl.Vector3{pos.X + dir.X, pos.Y + dir.Y, pos.Z + dir.Z}
 
-			// limite de profundidade
+			// depth limit
 			if pos.Y <= 1 {
 				break
 			}
 
-			// converte para chunk local
+			// convert to local chunk
 			coord := ToChunkCoord(pos)
 			localX := int(pos.X) - coord.X*pkg.ChunkSize
 			localY := int(pos.Y)
 			localZ := int(pos.Z) - coord.Z*pkg.ChunkSize
 
-			// verifica se o chunk existe
+			// check if the chunk exists
 			chunkCache.CacheMutex.RLock()
 			targetChunk := chunkCache.Active[coord]
 			chunkCache.CacheMutex.RUnlock()
 
 			if targetChunk != nil {
-				carveSphere(targetChunk, localX, localY, localZ, radius)
+				if localX >= 0 && localX < pkg.ChunkSize &&
+					localY >= 0 && localY < pkg.WorldHeight &&
+					localZ >= 0 && localZ < pkg.ChunkSize {
+					if targetChunk.Voxels[localX][localY][localZ].Type == "Water" {
+						break
+					}
+
+					dynamicRadius := radius + rand.Intn(2) // 2 or 3
+
+					carveSphere(targetChunk, localX, localY, localZ, dynamicRadius)
+				}
 			} else {
 				chunkCache.CacheMutex.Lock()
 				chunkCache.PendingVoxels[coord] = append(chunkCache.PendingVoxels[coord],
@@ -169,7 +183,7 @@ func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, p1, p2, p3 *perlin
 	}
 }
 
-// Função para esculpir uma esfera de ar (túnel)
+// Function to carve an air sphere (tunnel)
 func carveSphere(chunk *pkg.Chunk, cx, cy, cz, radius int) {
 	for x := cx - radius; x <= cx+radius; x++ {
 		for y := cy - radius; y <= cy+radius; y++ {
@@ -178,7 +192,7 @@ func carveSphere(chunk *pkg.Chunk, cx, cy, cz, radius int) {
 					y >= 0 && y < pkg.WorldHeight &&
 					z >= 0 && z < pkg.ChunkSize {
 					dx, dy, dz := x-cx, y-cy, z-cz
-					if dx*dx+dy*dy+dz*dz <= radius*radius {
+					if dx*dx+dy*dy+dz*dz <= radius*radius && chunk.Voxels[z][y][z].Type != "Water" {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 					}
 				}

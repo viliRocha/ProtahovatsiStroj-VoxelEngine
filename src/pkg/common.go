@@ -8,8 +8,9 @@ var PlantModels [4]rl.Model
 
 const (
 	WorldHeight        int     = 112
+	CloudHeight        int     = 92
 	ChunkSize          int     = 32
-	ChunkDistance      int     = 2
+	ChunkDistance      int     = 3
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 

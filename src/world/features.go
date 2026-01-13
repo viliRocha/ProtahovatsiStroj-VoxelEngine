@@ -320,7 +320,6 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 }
 
 func genClouds(chunk *pkg.Chunk, position rl.Vector3, p *perlin.Perlin) {
-	y := pkg.WorldHeight - 2
 	threshold := 0.05 // Intensity of the cloud formation
 	cloudFrequency := 0.05
 
@@ -333,7 +332,7 @@ func genClouds(chunk *pkg.Chunk, position rl.Vector3, p *perlin.Perlin) {
 			noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
 
 			if noise > threshold {
-				chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Cloud"}
+				chunk.Voxels[x][pkg.CloudHeight][z] = pkg.VoxelData{Type: "Cloud"}
 			}
 		}
 	}

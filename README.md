@@ -1,5 +1,5 @@
 # PtotahovatsiStroj
-### v0.11.9
+### v0.12.0
 <center><img src="./img/engine_logo.png" alt="Logo" width="100%"></center>
 
 A voxel engine built using **raylib-go** and **OpenGL**
@@ -9,15 +9,16 @@ A voxel engine built using **raylib-go** and **OpenGL**
 - **Water Formations**: Realistic water bodies.
 - **Surface Feature System**: Procedurally generated trees with [L-systems](https://en.wikipedia.org/wiki/L-system) and randomly placed flowers and tall grass.
 - **Cave Generation**: Intricate cave systems made using 3D perlin noise.
+- **Basic Shading**: Combines ambient with directional lighting for better depth perception.
 - **Atmospheric effects**: Atmospheric depth with fog and basic clouds.
 - **Cache System**: Efficiently stored surface features positions, providing better world consistency.
 
 ## Upcoming Features 📋
-- **Improved Lighting**: Basic lighting with shading and ambient occlusion for better depth perception.
+- **Smooth Lighting**: Improved lighting using vertex lighting and baked ambient occlusion.
 - **Block Interaction**: Enable players to place and destroy blocks.
 - **Biome Diversity**: Implement various biomes depending on the terrain.
 - **Dynamic Weather & Time Cycle**: Add a day/night cycle and weather effects such as rain and snow.
-- **Game Settings**: Create a menu where players can configure game features such as view distance, FPS limits, and world rules (weather, day/night cycle and cloud height).
+- **Game Settings**: Add a configuration menu accessible via a dedicated key where players can configure the view distance, FPS limits, world rules (weather, day/night cycle and add/remove or change cloud height), and toggle debug such as like FPS and player position.
 - **Web Build**: Compile the project to WASM.
 
 ## Screenshots 🖼️

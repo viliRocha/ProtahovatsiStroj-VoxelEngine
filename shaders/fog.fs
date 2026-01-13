@@ -1,71 +1,44 @@
 #version 330
-
-// Input vertex attributes (from vertex shader)
 in vec4 fragColor;
 in vec3 fragPosition;
 in vec3 fragNormal;
 
-// Input uniform values
+uniform vec3 lightDir;
+
 uniform vec4 colDiffuse;
 
-// Output fragment color
 out vec4 finalColor;
 
-#define     MAX_LIGHTS              4
-#define     LIGHT_DIRECTIONAL       0
-#define     LIGHT_POINT             1
-
-struct Light {
-    int enabled;
-    int type;
-    vec3 position;
-    vec3 target;
-    vec4 color;
-};
-
-// Input lighting values
-uniform Light lights[MAX_LIGHTS];
 uniform vec3 viewPos;
 uniform float fogDensity;
 
 void main()
 {
-    vec3 normal = normalize(fragNormal);
-    vec3 viewD = normalize(viewPos - fragPosition);
+    vec3 N = normalize(fragNormal);
+    vec3 L = normalize(-lightDir);
 
-    // fragment shader code
-    for (int i = 0; i < MAX_LIGHTS; i++) {
-        if (lights[i].enabled == 1) {
-            vec3 light = vec3(0.0);
+    // cor base do material
+    vec3 baseColor = (colDiffuse * fragColor).rgb;
 
-            if (lights[i].type == LIGHT_DIRECTIONAL) {
-                light = -normalize(lights[i].target - lights[i].position);
-            }
-            if (lights[i].type == LIGHT_POINT) {
-                light = normalize(lights[i].position - fragPosition);
-            }
+    float diff = max(dot(N, L), 0.2); // nunca menos que 0.2
 
-            float NdotL = max(dot(normal, light), 0.0);
-        }
-    }
-
-    vec4 baseColor = colDiffuse * fragColor;
+    // componente ambiente mínima (para não ficar preto)
+    float ambient = 0.3;
+    vec3 litColor = baseColor * (ambient + diff * 0.6);
 
     // Fog calculation
     float dist = length(viewPos - fragPosition);
-
     const vec4 fogColor = vec4(0.588, 0.816, 0.914, 1.0);  // Light Blue
     //const vec4 fogColor = vec4(0.525, 0.051, 0.051, 1.0); Red
-
-    // Exponential fog
-    float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
 
     // Linear fog (less nice)
     //const float fogStart = 2.0;
     //const float fogEnd = 10.0;
     //float fogFactor = (fogEnd - dist)/(fogEnd - fogStart);
 
+    // Exponential fog
+    float fogFactor = 1.0/exp((dist*fogDensity)*(dist*fogDensity));
     fogFactor = clamp(fogFactor, 0.0, 1.0);
 
-    finalColor = mix(fogColor, baseColor, fogFactor);
+    finalColor = mix(fogColor, vec4(litColor, 1.0), fogFactor);
 }

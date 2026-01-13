@@ -26,7 +26,7 @@ func main() {
 		//  Draw
 		render.RenderGame(&game)
 	}
-	rl.UnloadShader(game.FogShader)
+	rl.UnloadShader(game.Shader)
 	//rl.UnloadShader(game.AOShader)
 
 	// After the loop ends:

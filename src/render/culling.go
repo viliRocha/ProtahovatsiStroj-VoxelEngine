@@ -44,50 +44,12 @@ func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
 	return float32(total / 4.0)
 }
 
-func faceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
-	// Sample neighbors relevant to the face (adjust offsets per face)
-	// Example for +Y (top) face:
-	offsets := []pkg.Coords{
-		{pos.X, pos.Y + 1, pos.Z}, // directly above
-		{pos.X + 1, pos.Y + 1, pos.Z},
-		{pos.X - 1, pos.Y + 1, pos.Z},
-		{pos.X, pos.Y + 1, pos.Z + 1},
-		{pos.X, pos.Y + 1, pos.Z - 1},
-	}
-
-	occlusion := 0
-	for _, o := range offsets {
-		if o.X >= 0 && o.X < pkg.ChunkSize &&
-			o.Y >= 0 && o.Y < pkg.ChunkSize &&
-			o.Z >= 0 && o.Z < pkg.ChunkSize {
-			if chunk.Voxels[o.X][o.Y][o.Z].Type != "Air" {
-				occlusion++
-			}
-		}
-
-	}
-
-	// Map occlusion count to AO factor
-	// Tune these values to taste
-	base := float32(1.0)
-	step := float32(0.1) // each neighbor reduces AO by 0.1
-	minAO := float32(0.5)
-
-	ao := base - step*float32(occlusion)
-	if ao < minAO {
-		ao = minAO
-	}
-	if ao > 1.0 {
-		ao = 1.0
-	}
-	return ao
-}
-
 func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	// Clears buffers and specials list
 	var vertices []float32
 	var indices []uint16
 	var colors []uint8
+	var normals []float32
 	chunk.SpecialVoxels = chunk.SpecialVoxels[:0]
 
 	indexOffset := uint16(0)
@@ -154,7 +116,7 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 		colorModifier := uint8(
 			((pos.X*73856093 + pos.Y*19349663) ^
 				(pos.Z*83492791 + pos.X*19349663) ^
-				(pos.Y*83492791 + pos.Z*73856093)) % 8)
+				(pos.Y*83492791 + pos.Z*73856093)) % 16)
 
 		for face := 0; face < 6; face++ {
 			if !shouldDrawFace(chunk, pos, face) {
@@ -172,7 +134,24 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				voxelColor := applyLighting(c, lightIntensity)
 			*/
 
-			//ao := faceAO(chunk, pos, face)
+			//ao := calculateFaceAO(chunk, pos, face)
+
+			nx, ny, nz := 0.0, 0.0, 0.0
+
+			switch face {
+			case 0:
+				nx = 1 // +X
+			case 1:
+				nx = -1 // -X
+			case 2:
+				ny = 1 // +Y
+			case 3:
+				ny = -1 // -Y
+			case 4:
+				nz = 1 // +Z
+			case 5:
+				nz = -1 // -Z
+			}
 
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
@@ -196,6 +175,9 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				*/
 
 				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
+
+				// add normal for each face vertex
+				normals = append(normals, float32(nx), float32(ny), float32(nz))
 			}
 
 			//	Add the two triangles of the face
@@ -221,13 +203,16 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	if len(colors) > 0 {
 		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
 	}
+	if len(normals) > 0 {
+		mesh.Normals = (*float32)(unsafe.Pointer(&normals[0]))
+	}
 
 	rl.UploadMesh(&mesh, false)
 	model := rl.LoadModelFromMesh(mesh)
 
 	// Create material and assign it
 	material := rl.LoadMaterialDefault()
-	material.Shader = game.FogShader
+	material.Shader = game.Shader
 	materials := []rl.Material{material}
 	model.MaterialCount = int32(len(materials))
 	model.Materials = &materials[0]
@@ -272,24 +257,6 @@ func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
 						break
 					}
 				}
-
-				/*
-					// tenta expandir em Y também
-					height := 1
-					expand := true
-					for y+height < Ny && expand {
-						for w := 0; w < width; w++ {
-							next := chunk.Voxels[x+w][y+height][z]
-							if next.Type != "Cloud" || used[(y+height)*Nx+(x+w)] {
-								expand = false
-								break
-							}
-						}
-						if expand {
-							height++
-						}
-					}
-				*/
 
 				// marca como usado
 				for w := 0; w < width; w++ {
@@ -337,7 +304,7 @@ func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
 	model := rl.LoadModelFromMesh(mesh)
 
 	mat := rl.LoadMaterialDefault()
-	mat.Shader = game.FogShader
+	mat.Shader = game.Shader
 	mat.Maps.Color = rl.White
 	model.MaterialCount = 1
 	model.Materials = &mat
@@ -351,7 +318,7 @@ var FaceToChunkNeighbor = map[int]int{
 	1: 1, // -X → neighbor[1]
 	4: 2, // +Z → neighbor[2]
 	5: 3, // -Z → neighbor[3]
-	// 2 (+Y) e 3 (-Y) não têm vizinhos
+	// 2 (+Y) e 3 (-Y) don't have neighbors
 }
 
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
@@ -374,11 +341,11 @@ func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {
 
 	// Case 2: vertical faces (do not have chunk neighbors)
 	if faceIndex == 2 {
-		// +Y (topo)
+		// +Y (top)
 		return true
 	}
 	if faceIndex == 3 {
-		// -Y (fundo)
+		// -Y (bottom)
 		return false
 	}
 

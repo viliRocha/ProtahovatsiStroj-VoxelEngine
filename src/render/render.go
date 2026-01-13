@@ -14,7 +14,7 @@ import (
 func RenderVoxels(game *load.Game) {
 	cam := game.Camera.Position
 
-	rl.SetShaderValue(game.FogShader, rl.GetShaderLocation(game.FogShader, "viewPos"), []float32{cam.X, cam.Y, cam.Z}, rl.ShaderUniformVec3)
+	rl.SetShaderValue(game.Shader, rl.GetShaderLocation(game.Shader, "viewPos"), []float32{cam.X, cam.Y, cam.Z}, rl.ShaderUniformVec3)
 
 	// --- Round 1: solids ---
 	for coord, chunk := range game.ChunkCache.Active {
@@ -83,11 +83,13 @@ func RenderVoxels(game *load.Game) {
 	}
 
 	// --- Back-to-front sorting ---
-	sort.Slice(transparentItems, func(i, j int) bool {
-		di := rl.Vector3Length(rl.Vector3Subtract(transparentItems[i].Position, cam))
-		dj := rl.Vector3Length(rl.Vector3Subtract(transparentItems[j].Position, cam))
-		return di > dj // furthest first
-	})
+	if game.Camera.Position.Y >= float32(pkg.CloudHeight) {
+		sort.Slice(transparentItems, func(i, j int) bool {
+			di := rl.Vector3Length(rl.Vector3Subtract(transparentItems[i].Position, cam))
+			dj := rl.Vector3Length(rl.Vector3Subtract(transparentItems[j].Position, cam))
+			return di > dj // furthest first
+		})
+	}
 
 	// --- Round 3: transparent ---
 	rl.SetBlendMode(rl.BlendAlpha)
