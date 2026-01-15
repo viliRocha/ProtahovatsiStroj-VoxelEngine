@@ -33,8 +33,8 @@ type TreeData struct {
 type SpecialVoxel struct {
 	Position  Coords
 	Type      string
-	Model     rl.Model // usado para plantas
-	IsSurface bool     // usado para água
+	Model     rl.Model // for plants
+	IsSurface bool     // for water
 }
 
 type TransparentItem struct {
@@ -45,30 +45,26 @@ type TransparentItem struct {
 }
 
 type Chunk struct {
-	//Materials rl.Material
 	Voxels    [ChunkSize][WorldHeight][ChunkSize]VoxelData
-	Neighbors [4]*Chunk // 0: +X, 1: -X, 2: 4: +Z, 5: -Z
+	HeightMap [ChunkSize][ChunkSize]int // final height per terrain column
+	Neighbors [4]*Chunk                 // 0: +X, 1: -X, 2: 4: +Z, 5: -Z
 	Plants    []PlantData
 	Trees     []TreeData
 
+	// Buffers reutilizáveis para mesh
+	Vertices []float32
+	Indices  []uint16
+	Colors   []uint8
+	Normals  []float32
+
 	Mesh          rl.Mesh
 	Model         rl.Model
-	Faces         []FaceData // List of built faces
 	SpecialVoxels []SpecialVoxel
-	UploadedOnce  bool
 	IsOutdated    bool // Flag to know if you need to update the mesh
 }
 
-type FaceData struct {
-	Position Coords
-	Normal   rl.Vector3
-	Color    rl.Color
-}
-
 type Coords struct {
-	X int
-	Y int
-	Z int
+	X, Y, Z int
 }
 
 var FaceDirections = []rl.Vector3{
@@ -102,86 +98,13 @@ var FaceVertices = [6][4][3]float32{
 	{{1, 0, 0}, {0, 0, 0}, {0, 1, 0}, {1, 1, 0}},
 }
 
-// Returns the vertices, normals and UVs of a voxel face
-func GetFaceGeometry(faceIndex int, x, y, z float32) ([]rl.Vector3, []rl.Vector3, []rl.Vector2) {
-	px, py, pz := x, y, z
-
-	// Relative positions of face vertices
-	var vertices []rl.Vector3
-	var normal rl.Vector3
-
-	switch faceIndex {
-	case 0: // Right (+X)
-		vertices = []rl.Vector3{
-			{px + 1, py, pz},
-			{px + 1, py + 1, pz},
-			{px + 1, py + 1, pz + 1},
-			{px + 1, py, pz + 1},
-		}
-		normal = rl.NewVector3(1, 0, 0)
-	case 1: // Left (-X)
-		vertices = []rl.Vector3{
-			{px, py, pz + 1},
-			{px, py + 1, pz + 1},
-			{px, py + 1, pz},
-			{px, py, pz},
-		}
-		normal = rl.NewVector3(-1, 0, 0)
-	case 2: // Top (+Y)
-		vertices = []rl.Vector3{
-			{px, py + 1, pz},
-			{px, py + 1, pz + 1},
-			{px + 1, py + 1, pz + 1},
-			{px + 1, py + 1, pz},
-		}
-		normal = rl.NewVector3(0, 1, 0)
-	case 3: // Bottom (-Y)
-		vertices = []rl.Vector3{
-			{px, py, pz},
-			{px + 1, py, pz},
-			{px + 1, py, pz + 1},
-			{px, py, pz + 1},
-		}
-		normal = rl.NewVector3(0, -1, 0)
-	case 4: // Front (+Z)
-		vertices = []rl.Vector3{
-			{px + 1, py, pz + 1},
-			{px + 1, py + 1, pz + 1},
-			{px, py + 1, pz + 1},
-			{px, py, pz + 1},
-		}
-		normal = rl.NewVector3(0, 0, 1)
-	case 5: // Back (-Z)
-		vertices = []rl.Vector3{
-			{px, py, pz},
-			{px, py + 1, pz},
-			{px + 1, py + 1, pz},
-			{px + 1, py, pz},
-		}
-		normal = rl.NewVector3(0, 0, -1)
-	}
-
-	// Normals (1 per vertex)
-	normals := []rl.Vector3{normal, normal, normal, normal}
-
-	// Default texture coordinates (UV)
-	texcoords := []rl.Vector2{
-		{0, 1},
-		{0, 0},
-		{1, 0},
-		{1, 1},
-	}
-
-	return vertices, normals, texcoords
-}
-
 var VertexAOOffsets = [6][4][][]int{
 	// face z- (front)
 	{
-		{{0, 0, -1}, {-1, 0, 0}, {-1, 0, -1}}, // canto inferior esquerdo
-		{{0, 0, -1}, {1, 0, 0}, {1, 0, -1}},   // canto inferior direito
-		{{0, 0, -1}, {-1, 0, 0}, {-1, 0, -1}}, // canto superior esquerdo
-		{{0, 0, -1}, {1, 0, 0}, {1, 0, -1}},   // canto superior direito
+		{{0, 0, -1}, {-1, 0, 0}, {-1, 0, -1}}, // bottom left corner
+		{{0, 0, -1}, {1, 0, 0}, {1, 0, -1}},   // bottom right corner
+		{{0, 0, -1}, {-1, 0, 0}, {-1, 0, -1}}, // top left corner
+		{{0, 0, -1}, {1, 0, 0}, {1, 0, -1}},   // top right corner
 	},
 	//	face z+ (back)
 	{
@@ -190,28 +113,28 @@ var VertexAOOffsets = [6][4][][]int{
 		{{0, 0, 1}, {-1, 0, 0}, {-1, 0, 1}},
 		{{0, 0, 1}, {1, 0, 0}, {1, 0, 1}},
 	},
-	// Face -X (esquerda)
+	// Face -X (left)
 	{
 		{{-1, 0, 0}, {0, 0, -1}, {-1, 0, -1}},
 		{{-1, 0, 0}, {0, 0, 1}, {-1, 0, 1}},
 		{{-1, 0, 0}, {0, 0, -1}, {-1, 0, -1}},
 		{{-1, 0, 0}, {0, 0, 1}, {-1, 0, 1}},
 	},
-	// Face +X (direita)
+	// Face +X (right)
 	{
 		{{1, 0, 0}, {0, 0, -1}, {1, 0, -1}},
 		{{1, 0, 0}, {0, 0, 1}, {1, 0, 1}},
 		{{1, 0, 0}, {0, 0, -1}, {1, 0, -1}},
 		{{1, 0, 0}, {0, 0, 1}, {1, 0, 1}},
 	},
-	// Face -Y (baixo)
+	// Face -Y (bottom)
 	{
 		{{0, -1, 0}, {-1, 0, 0}, {-1, -1, 0}},
 		{{0, -1, 0}, {1, 0, 0}, {1, -1, 0}},
 		{{0, -1, 0}, {-1, 0, 0}, {-1, -1, 0}},
 		{{0, -1, 0}, {1, 0, 0}, {1, -1, 0}},
 	},
-	// Face +Y (cima)
+	// Face +Y (top)
 	{
 		{{0, 1, 0}, {-1, 0, 0}, {-1, 1, 0}},
 		{{0, 1, 0}, {1, 0, 0}, {1, 1, 0}},

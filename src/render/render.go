@@ -27,7 +27,6 @@ func RenderVoxels(game *load.Game) {
 
 		if chunk.IsOutdated {
 			BuildChunkMesh(game, chunk, chunkPos)
-			//BuildCloudGreddyMesh(game, chunk)
 			chunk.IsOutdated = false // reset flag → do not rebuild each frame
 		}
 
@@ -67,14 +66,14 @@ func RenderVoxels(game *load.Game) {
 		)
 
 		for _, voxel := range chunk.SpecialVoxels {
-			voxelPosition := rl.NewVector3(
+			pos := rl.NewVector3(
 				chunkPos.X+float32(voxel.Position.X),
 				chunkPos.Y+float32(voxel.Position.Y),
 				chunkPos.Z+float32(voxel.Position.Z),
 			)
 
 			transparentItems = append(transparentItems, pkg.TransparentItem{
-				Position:       voxelPosition,
+				Position:       pos,
 				Type:           voxel.Type,
 				Color:          world.BlockTypes[voxel.Type].Color,
 				IsSurfaceWater: voxel.Type == "Water" && voxel.IsSurface,

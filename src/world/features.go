@@ -78,7 +78,7 @@ type TurtleState struct {
 }
 
 // Generate vegetation at random surface positions
-func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool, p1, p2, p3 *perlin.Perlin) {
+func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.PlantData, reusePlants bool) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reusePlants && oldPlants != nil {
@@ -102,7 +102,7 @@ func generatePlants(chunk *pkg.Chunk, chunkPos rl.Vector3, oldPlants []pkg.Plant
 		x := rand.Intn(pkg.ChunkSize)
 		z := rand.Intn(pkg.ChunkSize)
 
-		height := calculateHeight(chunkPos, x, z, p1, p2, p3)
+		height := chunk.HeightMap[x][z]
 
 		if height < 0 || height+1 >= pkg.WorldHeight {
 			continue // ignore invalid positions
@@ -139,15 +139,21 @@ func parseLSystemRule(ruleStr string) map[rune]string {
 func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 	result := axiom
 	for range iterations {
-		var newResult string
+		var builder strings.Builder
+
+		// reserve approximate space to avoid relocations
+		builder.Grow(len(result) * 2)
+
 		for _, char := range result {
 			if replacement, ok := rules[char]; ok {
-				newResult += replacement
-				continue
+				builder.WriteString(replacement)
+			} else {
+				builder.WriteRune(char)
 			}
-			newResult += string(char)
 		}
-		result = newResult
+
+		// converts the builder's content into a string
+		result = builder.String()
 	}
 	return result
 }
@@ -269,7 +275,7 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool, p1, p2, p3 *perlin.Perlin) {
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
@@ -289,7 +295,7 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 		z := rand.Intn(pkg.ChunkSize)
 
 		// find the surface
-		height := calculateHeight(chunkOrigin, x, z, p1, p2, p3)
+		height := chunk.HeightMap[x][z]
 
 		if height < 0 || height >= pkg.WorldHeight {
 			continue
@@ -332,7 +338,11 @@ func genClouds(chunk *pkg.Chunk, position rl.Vector3, p *perlin.Perlin) {
 			noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
 
 			if noise > threshold {
-				chunk.Voxels[x][pkg.CloudHeight][z] = pkg.VoxelData{Type: "Cloud"}
+				if chunk.Voxels[x][pkg.CloudHeight][z].Type == "Air" {
+					chunk.Voxels[x][pkg.CloudHeight][z] = pkg.VoxelData{Type: "Cloud"}
+				} else {
+					break // meets trees or mauntain
+				}
 			}
 		}
 	}
@@ -381,7 +391,9 @@ func genSandFormations(chunk *pkg.Chunk, ylevel, x, z int) {
 				voxel := chunk.Voxels[adjX][y][adjZ].Type
 
 				// Replaces dirt and grass with sand
-				if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 {
+				above := chunk.Voxels[adjX][y+1][adjZ]
+
+				if (voxel == "Grass" || voxel == "Dirt") && noiseValue > 0.32 && (above.Type == "Water" || above.Type == "Air") {
 					chunk.Voxels[adjX][y][adjZ] = pkg.VoxelData{Type: "Sand"}
 				}
 			}

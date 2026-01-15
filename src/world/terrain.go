@@ -43,6 +43,8 @@ func GenerateChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin, chunkCache *C
 			// Use Perlin noise to generate the height of the terrain
 			height := calculateHeight(position, x, z, p1, p2, p3)
 
+			chunk.HeightMap[x][z] = height
+
 			for y := range pkg.WorldHeight {
 				isSolid := y <= height
 
@@ -68,11 +70,11 @@ func GenerateChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin, chunkCache *C
 		genLakeFormations(chunk)
 	}
 
-	genCaves(chunkCache, position, waterLevel, p1, p2, p3)
+	genCaves(chunk, chunkCache, position, waterLevel, p1)
 
 	//  Generate the plants after the terrain generation
-	generatePlants(chunk, position, oldPlants, reusePlants, p1, p2, p3)
-	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees, p1, p2, p3)
+	generatePlants(chunk, position, oldPlants, reusePlants)
+	generateTrees(chunk, chunkCache, position, chooseRandomTree(), oldTrees, reuseTrees)
 
 	genClouds(chunk, position, p1)
 
@@ -108,9 +110,9 @@ func calculateHeight(position rl.Vector3, x, z int, p1, p2, p3 *perlin.Perlin) i
 }
 
 // Perlin worms using 3D perlin noise
-func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, waterLevel int, p1, p2, p3 *perlin.Perlin) {
+func genCaves(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, waterLevel int, p1 *perlin.Perlin) {
 	steps := 200 + rand.Intn(601)
-	freq := 0.01
+	freq := 0.08
 	radius := 2
 	generationAttempt := rand.Intn(2)
 
@@ -119,7 +121,7 @@ func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, waterLevel int, p1
 		z := rand.Intn(pkg.ChunkSize)
 
 		// find the surface
-		surface := calculateHeight(chunkOrigin, x, z, p1, p2, p3)
+		surface := chunk.HeightMap[x][z]
 
 		if surface <= waterLevel {
 			continue //	Don't create caves next to waterBodies
@@ -136,14 +138,13 @@ func genCaves(chunkCache *ChunkCache, chunkOrigin rl.Vector3, waterLevel int, p1
 			dir := rl.Vector3{dx, dy, dz}
 			// normalize
 			length := float32(math.Sqrt(float64(dx*dx + dy*dy + dz*dz)))
-			//	Less influence of the Y axis
-			dir = rl.Vector3{dx / length, (dy / length) * 0.8, dz / length}
+			dir = rl.Vector3{dx / length, dy / length, dz / length}
 
-			// avança
+			// advance
 			pos = rl.Vector3{pos.X + dir.X, pos.Y + dir.Y, pos.Z + dir.Z}
 
 			// depth limit
-			if pos.Y <= 1 {
+			if pos.Y <= 2 {
 				break
 			}
 
@@ -192,7 +193,9 @@ func carveSphere(chunk *pkg.Chunk, cx, cy, cz, radius int) {
 					y >= 0 && y < pkg.WorldHeight &&
 					z >= 0 && z < pkg.ChunkSize {
 					dx, dy, dz := x-cx, y-cy, z-cz
-					if dx*dx+dy*dy+dz*dz <= radius*radius && chunk.Voxels[z][y][z].Type != "Water" {
+					if chunk.Voxels[x][y][z].Type == "Water" {
+						return
+					} else if dx*dx+dy*dy+dz*dz <= radius*radius {
 						chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Air"}
 					}
 				}

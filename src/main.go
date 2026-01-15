@@ -27,7 +27,6 @@ func main() {
 		render.RenderGame(&game)
 	}
 	rl.UnloadShader(game.Shader)
-	//rl.UnloadShader(game.AOShader)
 
 	// After the loop ends:
 	defer rl.CloseWindow()

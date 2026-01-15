@@ -9,50 +9,22 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// calculates occlusion factor per vertex
-func calculateVoxelAO(chunk *pkg.Chunk, pos pkg.Coords, face int, corner int) float32 {
-	// Each vertex of the face has 3 potential neighbors (two edges + one diagonal)
-	// If everything is solid, the vertex gets darker.
-	offsets := pkg.VertexAOOffsets[face][corner] // offset table (dx,dy,dz) for each neighbor
-	occlusion := 0
-	for _, off := range offsets {
-		nx := pos.X + off[0]
-		ny := pos.Y + off[1]
-		nz := pos.Z + off[2]
-		if nx >= 0 && nx < pkg.ChunkSize &&
-			ny >= 0 && ny < pkg.ChunkSize &&
-			nz >= 0 && nz < pkg.ChunkSize {
-			if world.BlockTypes[chunk.Voxels[nx][ny][nz].Type].IsSolid {
-				occlusion++
-			}
-		} else {
-			// outside the chunk → treats it as solid to avoid leaving the edge too light
-			occlusion++
-		}
-	}
-
-	// Normalize: 0 solid neighbors = light, 3 solid neighbors = dark
-	return 0.6 + 0.5*(1.0-float32(occlusion)/3.0)
-}
-
-func calculateFaceAO(chunk *pkg.Chunk, pos pkg.Coords, face int) float32 {
-	total := 0.0
-	for corner := 0; corner < 4; corner++ {
-		total += float64(calculateVoxelAO(chunk, pos, face, corner))
-	}
-	// average of the 4 corners
-	return float32(total / 4.0)
-}
-
 func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	// Clears buffers and specials list
-	var vertices []float32
-	var indices []uint16
-	var colors []uint8
-	var normals []float32
+	chunk.Vertices = chunk.Vertices[:0]
+	chunk.Indices = chunk.Indices[:0]
+	chunk.Colors = chunk.Colors[:0]
+	chunk.Normals = chunk.Normals[:0]
 	chunk.SpecialVoxels = chunk.SpecialVoxels[:0]
 
+	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.WorldHeight), int(pkg.ChunkSize)
+
 	indexOffset := uint16(0)
+
+	// Tabela fixa de normais por face
+	faceNormals := [6][3]float32{
+		{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1},
+	}
 
 	/* Multidimensional Arrays Linearization, docs and extras that may come in handy
 	 * https://ic.unicamp.br/~bit/mc102/aulas/aula15.pdf (introdução)
@@ -61,8 +33,6 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	 * https://teotl.dev/vischunk/ (may be useful)
 	 * (AI was used to help the interpretation of some of those docs)
 	 */
-
-	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.WorldHeight), int(pkg.ChunkSize)
 	for i := 0; i < Nx*Ny*Nz; i++ {
 		pos := pkg.Coords{
 			X: i / (Ny * Nz),
@@ -123,6 +93,8 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 				continue
 			}
 
+			nx, ny, nz := faceNormals[face][0], faceNormals[face][1], faceNormals[face][2]
+
 			/*
 				voxelPosition := rl.NewVector3(
 					chunkPos.X+float32(pos.X),
@@ -136,26 +108,9 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 
 			//ao := calculateFaceAO(chunk, pos, face)
 
-			nx, ny, nz := 0.0, 0.0, 0.0
-
-			switch face {
-			case 0:
-				nx = 1 // +X
-			case 1:
-				nx = -1 // -X
-			case 2:
-				ny = 1 // +Y
-			case 3:
-				ny = -1 // -Y
-			case 4:
-				nz = 1 // +Z
-			case 5:
-				nz = -1 // -Z
-			}
-
 			for vertice := 0; vertice < 4; vertice++ {
 				v := pkg.FaceVertices[face][vertice]
-				vertices = append(vertices,
+				chunk.Vertices = append(chunk.Vertices,
 					float32(pos.X)+v[0],
 					float32(pos.Y)+v[1],
 					float32(pos.Z)+v[2],
@@ -174,14 +129,14 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 					)
 				*/
 
-				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
+				chunk.Colors = append(chunk.Colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
 
 				// add normal for each face vertex
-				normals = append(normals, float32(nx), float32(ny), float32(nz))
+				chunk.Normals = append(chunk.Normals, nx, ny, nz)
 			}
 
 			//	Add the two triangles of the face
-			indices = append(indices,
+			chunk.Indices = append(chunk.Indices,
 				indexOffset, indexOffset+1, indexOffset+2,
 				indexOffset, indexOffset+2, indexOffset+3,
 			)
@@ -190,21 +145,21 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	}
 
 	mesh := rl.Mesh{
-		VertexCount:   int32(len(vertices) / 3),
-		TriangleCount: int32(len(indices) / 3),
+		VertexCount:   int32(len(chunk.Vertices) / 3),
+		TriangleCount: int32(len(chunk.Indices) / 3),
 	}
 
-	if len(vertices) > 0 {
-		mesh.Vertices = (*float32)(unsafe.Pointer(&vertices[0]))
+	if len(chunk.Vertices) > 0 {
+		mesh.Vertices = &chunk.Vertices[0]
 	}
-	if len(indices) > 0 {
-		mesh.Indices = (*uint16)(unsafe.Pointer(&indices[0]))
+	if len(chunk.Indices) > 0 {
+		mesh.Indices = &chunk.Indices[0]
 	}
-	if len(colors) > 0 {
-		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
+	if len(chunk.Colors) > 0 {
+		mesh.Colors = &chunk.Colors[0]
 	}
-	if len(normals) > 0 {
-		mesh.Normals = (*float32)(unsafe.Pointer(&normals[0]))
+	if len(chunk.Normals) > 0 {
+		mesh.Normals = &chunk.Normals[0]
 	}
 
 	rl.UploadMesh(&mesh, false)
@@ -213,9 +168,8 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 	// Create material and assign it
 	material := rl.LoadMaterialDefault()
 	material.Shader = game.Shader
-	materials := []rl.Material{material}
-	model.MaterialCount = int32(len(materials))
-	model.Materials = &materials[0]
+	model.MaterialCount = 1
+	model.Materials = &material
 
 	// Assign to chunk
 	chunk.Model = model
@@ -311,14 +265,6 @@ func BuildCloudGreddyMesh(game *load.Game, chunk *pkg.Chunk) {
 
 	//chunk.Model = model
 	chunk.IsOutdated = false
-}
-
-var FaceToChunkNeighbor = map[int]int{
-	0: 0, // +X → neighbor[0]
-	1: 1, // -X → neighbor[1]
-	4: 2, // +Z → neighbor[2]
-	5: 3, // -Z → neighbor[3]
-	// 2 (+Y) e 3 (-Y) don't have neighbors
 }
 
 func shouldDrawFace(chunk *pkg.Chunk, pos pkg.Coords, faceIndex int) bool {

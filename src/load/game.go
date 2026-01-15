@@ -60,7 +60,7 @@ func InitGame() Game {
 	perlin2 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed2)
 	perlin3 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed3)
 
-	Shader := rl.LoadShader("shaders/lighting.vs", "shaders/fog.fs")
+	Shader := rl.LoadShader("shaders/shader.vs", "shaders/shader.fs")
 
 	// Locations (do not index shader.Locs)
 	locFogDensity := rl.GetShaderLocation(Shader, "fogDensity")
@@ -92,7 +92,7 @@ func InitGame() Game {
 	chunkCache := world.NewChunkCache() // Initialize ChunkCache
 
 	// Creates the first chunk at the origin
-	originCoord := world.ChunkCoord{X: 0, Y: 0, Z: 0}
+	originCoord := pkg.Coords{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
 	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)

@@ -23,8 +23,8 @@ void main()
     float diff = max(dot(N, L), 0.2); // nunca menos que 0.2
 
     // componente ambiente mínima (para não ficar preto)
-    float ambient = 0.3;
-    vec3 litColor = baseColor * (ambient + diff * 0.6);
+    float ambient = 0.4;
+    vec3 litColor = baseColor * (ambient + diff * 0.75);
 
     // Fog calculation
     float dist = length(viewPos - fragPosition);

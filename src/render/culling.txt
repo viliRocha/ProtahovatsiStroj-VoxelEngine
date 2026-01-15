@@ -1,155 +1,45 @@
-func BuildChunkMesh(chunk *pkg.Chunk, chunkPos rl.Vector3 /*, lightPosition rl.Vector3*/) {
-	// Limpa buffers e lista de especiais
-	var vertices []float32
-	var indices []uint16
-	var colors []uint8
-	chunk.SpecialVoxels = chunk.SpecialVoxels[:0]
+	// Se o Model ainda não existe, cria uma vez
+	if chunk.Model.MeshCount == 0 {
+		maxFaces := pkg.ChunkSize * pkg.WorldHeight * pkg.ChunkSize * 6
 
-	indexOffset := uint16(0)
+		// Aloca buffers
+		chunk.Vertices = make([]float32, 0, maxFaces*4*3)
+		chunk.Normals = make([]float32, 0, maxFaces*4*3)
+		chunk.Colors = make([]uint8, 0, maxFaces*4*4)
+		chunk.Indices = make([]uint16, 0, maxFaces*6)
 
-	/* Multidimensional Arrays Linearization, docs and extras that may come in handy
-	 * https://ic.unicamp.br/~bit/mc102/aulas/aula15.pdf (introdução)
-	 * https://felippe.ubi.pt/texts3/contr_av_ppt01p.pdf (pág. 13)
-	 * https://www.aussieai.com/book/ch36-linearized-multidimensional-arrays
-	 * https://teotl.dev/vischunk/ (may be useful)
-	 * (AI was used to help the interpretation of some of those docs)
-	 */
+		mesh := rl.Mesh{}
 
-	Nx, Ny, Nz := int(pkg.ChunkSize), int(pkg.ChunkSize), int(pkg.ChunkSize)
-	for i := 0; i < Nx*Ny*Nz; i++ {
-		pos := pkg.Coords{
-			X: i / (Ny * Nz),
-			Y: (i / Nz) % Ny,
-			Z: i % Nz,
-		}
+		// ⚠️ ponteiros APONTAM PARA MEMÓRIA DO CHUNK
+		mesh.Vertices = &chunk.Vertices[:cap(chunk.Vertices)][0]
+		mesh.Normals = &chunk.Normals[:cap(chunk.Normals)][0]
+		mesh.Colors = &chunk.Colors[:cap(chunk.Colors)][0]
+		mesh.Indices = &chunk.Indices[:cap(chunk.Indices)][0]
 
-		voxel := chunk.Voxels[pos.X][pos.Y][pos.Z]
-		block := world.BlockTypes[voxel.Type]
+		mesh.VertexCount = int32(cap(chunk.Vertices) / 3)
+		mesh.TriangleCount = int32(cap(chunk.Indices) / 3)
 
-		// Casos especiais → não entram no mesh, mas guardamos
-		switch voxel.Type {
-		case "Plant":
-			chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
-				X: pos.X, Y: pos.Y, Z: pos.Z,
-				Type:  voxel.Type,
-				Model: voxel.Model,
-			})
-			continue
-		case "Water": // só adiciona se for superfície
-			isSurface := true
-			if pos.Y+1 < pkg.ChunkSize {
-				above := chunk.Voxels[pos.X][pos.Y+1][pos.Z]
-				if above.Type == "Water" {
-					isSurface = false
-				}
-			}
-			if isSurface {
-				chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
-					X: pos.X, Y: pos.Y, Z: pos.Z,
-					Type:      voxel.Type,
-					IsSurface: true,
-				})
-			}
-			continue
-		case "Cloud":
-			chunk.SpecialVoxels = append(chunk.SpecialVoxels, pkg.SpecialVoxel{
-				X: pos.X, Y: pos.Y, Z: pos.Z,
-				Type: voxel.Type,
-			})
-			continue
-		}
+		rl.UploadMesh(&mesh, true) // true = dynamic mesh
+		model := rl.LoadModelFromMesh(mesh)
 
-		if !block.IsSolid {
-			continue
-		}
+		// Create material and assign it
+		material := rl.LoadMaterialDefault()
+		material.Shader = game.Shader
+		model.MaterialCount = 1
+		model.Materials = &material
 
-		c := block.Color
-		// Add color per block (RGBA) on a deterministic way (so it can be recalculated when a new chunk is created and still look the same)
-		colorModifier := uint8(
-			((pos.X*73856093 + pos.Y*19349663) ^
-				(pos.Z*83492791 + pos.X*19349663) ^
-				(pos.Y*83492791 + pos.Z*73856093)) % 8)
-
-		for face := 0; face < 6; face++ {
-			if !shouldDrawFace(chunk, pos, face) {
-				continue
-			}
-
-			/*
-				voxelPosition := rl.NewVector3(
-					chunkPos.X+float32(x),
-					chunkPos.Y+float32(y),
-					chunkPos.Z+float32(z),
-				)
-
-				lightIntensity := calculateLightIntensity(voxelPosition, lightPosition)
-				voxelColor := applyLighting(block.Color, lightIntensity)
-			*/
-
-			//ao := calculateFaceAO(chunk, pos, face)
-
-			for vertice := 0; vertice < 4; vertice++ {
-				v := pkg.FaceVertices[face][vertice]
-				vertices = append(vertices,
-					float32(pos.X)+v[0],
-					float32(pos.Y)+v[1],
-					float32(pos.Z)+v[2],
-				)
-
-				/*
-					colors = append(colors,
-						uint8(float32(c.R+colorModifier)*ao),
-						uint8(float32(c.G+colorModifier)*ao),
-						uint8(float32(c.B+colorModifier)*ao),
-						c.A,
-					)
-				*/
-
-				colors = append(colors, c.R+colorModifier, c.G+colorModifier, c.B+colorModifier, c.A)
-			}
-
-			//	Add the two triangles of the face
-			indices = append(indices,
-				indexOffset, indexOffset+1, indexOffset+2,
-				indexOffset, indexOffset+2, indexOffset+3,
-			)
-			indexOffset += 4
-		}
+		chunk.Model = model
 	}
 
-	mesh := rl.Mesh{
-		VertexCount:   int32(len(vertices) / 3),
-		TriangleCount: int32(len(indices) / 3),
+	// Atualiza ponteiros do mesh para os buffers atuais
+	mesh := chunk.Model.Meshes
+
+	if len(chunk.Vertices) > 0 {
+		rl.UpdateMeshBuffer(*mesh, 0, float32SliceToBytes(chunk.Vertices), len(chunk.Vertices)*4)
+		rl.UpdateMeshBuffer(*mesh, 2, float32SliceToBytes(chunk.Normals), len(chunk.Normals)*4)
+		rl.UpdateMeshBuffer(*mesh, 3, chunk.Colors, len(chunk.Colors))
+		rl.UpdateMeshBuffer(*mesh, 6, uint16SliceToBytes(chunk.Indices), len(chunk.Indices)*2)
 	}
 
-	if len(vertices) > 0 {
-		mesh.Vertices = (*float32)(unsafe.Pointer(&vertices[0]))
-	}
-	if len(indices) > 0 {
-		mesh.Indices = (*uint16)(unsafe.Pointer(&indices[0]))
-	}
-	if len(colors) > 0 {
-		mesh.Colors = (*uint8)(unsafe.Pointer(&colors[0]))
-	}
-
-	if chunk.Mesh.VertexCount > 0 && chunk.Mesh.TriangleCount > 0 {
-		if !chunk.UploadedOnce {
-			rl.UploadMesh(&chunk.Mesh, true) // primeira vez
-			chunk.Model = rl.LoadModelFromMesh(chunk.Mesh)
-
-			// Create material and assign it
-			material := rl.LoadMaterialDefault()
-			chunk.Model.MaterialCount = 1
-			chunk.Model.Materials = &material
-			chunk.UploadedOnce = true
-		} else {
-			rl.UploadMesh(&chunk.Mesh, false) // atualiza
-		}
-		chunk.Model.MeshCount = 1
-		chunk.Model.Meshes = &chunk.Mesh
-	}
-
-	// Assign to chunk
-	chunk.HasMesh = true
-	chunk.IsOutdated = false
-}
+	mesh.VertexCount = int32(len(chunk.Vertices) / 3)
+	mesh.TriangleCount = int32(len(chunk.Indices) / 3)

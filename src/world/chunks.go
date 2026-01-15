@@ -11,13 +11,7 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-var OppositeFaces = [6]int{1, 0, 3, 2, 5, 4}
-
 const MaxChunksPerFrame = 2
-
-type ChunkCoord struct {
-	X, Y, Z int
-}
 
 type PendingWrite struct {
 	Pos   [3]int
@@ -25,25 +19,25 @@ type PendingWrite struct {
 }
 
 type ChunkCache struct {
-	Active        map[ChunkCoord]*pkg.Chunk      // active chunks
-	PlantsCache   map[ChunkCoord][]pkg.PlantData // persistent plants by chunk
-	TreesCache    map[ChunkCoord][]pkg.TreeData
-	PendingVoxels map[ChunkCoord][]PendingWrite
-	CacheMutex    sync.RWMutex
+	Active        map[pkg.Coords]*pkg.Chunk      // chunks that are loaded, meshed, and ready to render.
+	PlantsCache   map[pkg.Coords][]pkg.PlantData // persistent plants by chunk
+	TreesCache    map[pkg.Coords][]pkg.TreeData
+	PendingVoxels map[pkg.Coords][]PendingWrite // queue of voxel modifications that haven’t yet been applied to the chunk
+	CacheMutex    sync.RWMutex                  // Synchronization primitive to protect concurrent access to the cache maps. Multiple goroutines may read chunk data in parallel, but writes (adding/removing chunks, applying voxel changes) must be exclusive
 }
 
 func NewChunkCache() *ChunkCache {
 	// Creates a hash map to store voxel data
 	return &ChunkCache{
-		Active:        make(map[ChunkCoord]*pkg.Chunk),
-		PlantsCache:   make(map[ChunkCoord][]pkg.PlantData),
-		TreesCache:    make(map[ChunkCoord][]pkg.TreeData),
-		PendingVoxels: make(map[ChunkCoord][]PendingWrite),
+		Active:        make(map[pkg.Coords]*pkg.Chunk),
+		PlantsCache:   make(map[pkg.Coords][]pkg.PlantData),
+		TreesCache:    make(map[pkg.Coords][]pkg.TreeData),
+		PendingVoxels: make(map[pkg.Coords][]PendingWrite),
 	}
 }
 
-func ToChunkCoord(pos rl.Vector3) ChunkCoord {
-	return ChunkCoord{
+func ToChunkCoord(pos rl.Vector3) pkg.Coords {
+	return pkg.Coords{
 		X: int(math.Floor(float64(pos.X) / float64(pkg.ChunkSize))),
 		Y: 0, //	Fixed Height
 		Z: int(math.Floor(float64(pos.Z) / float64(pkg.ChunkSize))),
@@ -152,7 +146,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 
 				break
 			}
 
-			coord := ChunkCoord{X: x, Y: 0, Z: z}
+			coord := pkg.Coords{X: x, Y: 0, Z: z}
 
 			// Allow aerial chunks to load if there are pending writes for them
 			chunkCache.CacheMutex.RLock()
@@ -179,7 +173,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 
 	// Ensures that each chunk on the chunkCache.chunks map has up-to-date references to its neighboring chunks on X and Z directions
 	for coord, chunk := range chunkCache.Active {
 		for i, direction := range pkg.HorizontalDirections {
-			neighborCoord := ChunkCoord{
+			neighborCoord := pkg.Coords{
 				X: coord.X + int(direction.X),
 				Y: 0,
 				Z: coord.Z + int(direction.Z),
