@@ -25,13 +25,15 @@ const (
 )
 
 type Game struct {
-	Camera     rl.Camera
-	CameraMode rl.CameraMode
-	ChunkCache *world.ChunkCache
-	Perlin1    *perlin.Perlin
-	Perlin2    *perlin.Perlin
-	Perlin3    *perlin.Perlin
-	Shader     rl.Shader
+	Camera        rl.Camera
+	CameraMode    rl.CameraMode
+	ChunkCache    *world.ChunkCache
+	Perlin1       *perlin.Perlin
+	Perlin2       *perlin.Perlin
+	Perlin3       *perlin.Perlin
+	Worley        *world.WorleyNoise
+	BiomeSelector *world.BiomeSelector
+	Shader        rl.Shader
 	//LightPosition rl.Vector3
 }
 
@@ -60,6 +62,9 @@ func InitGame() Game {
 	perlin2 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed2)
 	perlin3 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed3)
 
+	worley := world.NewWorleyNoise(seed1, 128)
+	biomeSel := world.NewBiomeSelector(seed1, 128)
+
 	Shader := rl.LoadShader("shaders/shader.vs", "shaders/shader.fs")
 
 	// Locations (do not index shader.Locs)
@@ -67,7 +72,7 @@ func InitGame() Game {
 
 	// Fog density calculation
 	// Inverse relationship: more chunks → less fog
-	fogDensity := float32(0.036 * (1.0 / float32(pkg.ChunkDistance)))
+	fogDensity := float32(0.072 * (1.0 / float32(pkg.ChunkDistance)))
 	//fmt.Println(fogDensity)
 	rl.SetShaderValue(Shader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
 
@@ -95,18 +100,20 @@ func InitGame() Game {
 	originCoord := pkg.Coords{X: 0, Y: 0, Z: 0}
 	originPos := rl.NewVector3(0, 0, 0)
 
-	chunkCache.Active[originCoord] = world.GenerateChunk(originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)
+	chunkCache.Active[originCoord] = world.GenerateChunk(worley, biomeSel, originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)
 
 	rl.SetTargetFPS(100)
 
 	return Game{
-		Camera:     camera,
-		CameraMode: cameraMode,
-		ChunkCache: chunkCache,
-		Perlin1:    perlin1,
-		Perlin2:    perlin2,
-		Perlin3:    perlin3,
-		Shader:     Shader,
+		Camera:        camera,
+		CameraMode:    cameraMode,
+		ChunkCache:    chunkCache,
+		Perlin1:       perlin1,
+		Perlin2:       perlin2,
+		Perlin3:       perlin3,
+		Worley:        worley,
+		BiomeSelector: biomeSel,
+		Shader:        Shader,
 		//LightPosition: LightPosition,
 	}
 }

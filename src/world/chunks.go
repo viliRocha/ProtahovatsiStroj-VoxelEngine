@@ -44,7 +44,7 @@ func ToChunkCoord(pos rl.Vector3) pkg.Coords {
 	}
 }
 
-func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin) *pkg.Chunk {
+func (cc *ChunkCache) GetChunk(worley *WorleyNoise, biomeSel *BiomeSelector, position rl.Vector3, p1, p2, p3 *perlin.Perlin) *pkg.Chunk {
 	coord := ToChunkCoord(position)
 
 	cc.CacheMutex.RLock()
@@ -56,14 +56,14 @@ func (cc *ChunkCache) GetChunk(position rl.Vector3, p1, p2, p3 *perlin.Perlin) *
 	var newChunk *pkg.Chunk
 
 	if exists {
-		newChunk = GenerateChunk(position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
+		newChunk = GenerateChunk(worley, biomeSel, position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
 	} else {
 		// First time the chunk is generated
 		// If there are saved plants, reuse them; if not, create new ones
 		if (hasPlants && len(oldPlants) > 0) || (hasTrees && len(oldTrees) > 0) {
-			newChunk = GenerateChunk(position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
+			newChunk = GenerateChunk(worley, biomeSel, position, p1, p2, p3, cc, oldPlants, true, oldTrees, true)
 		} else {
-			newChunk = GenerateChunk(position, p1, p2, p3, cc, nil, false, nil, false)
+			newChunk = GenerateChunk(worley, biomeSel, position, p1, p2, p3, cc, nil, false, nil, false)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (cc *ChunkCache) CleanUp(playerPosition rl.Vector3) {
 	}
 }
 
-func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 *perlin.Perlin) {
+func ManageChunks(worley *WorleyNoise, biomeSel *BiomeSelector, playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 *perlin.Perlin) {
 	playerCoord := ToChunkCoord(playerPosition)
 
 	chunkRequests := make(chan rl.Vector3, 100)
@@ -130,7 +130,7 @@ func ManageChunks(playerPosition rl.Vector3, chunkCache *ChunkCache, p1, p2, p3 
 	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for cp := range chunkRequests {
-				chunkCache.GetChunk(cp, p1, p2, p3)
+				chunkCache.GetChunk(worley, biomeSel, cp, p1, p2, p3)
 			}
 			done <- struct{}{}
 		}()

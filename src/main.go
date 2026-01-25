@@ -21,7 +21,7 @@ func main() {
 		rl.UpdateCamera(&game.Camera, game.CameraMode)
 
 		// Manage chunks based on player's position
-		world.ManageChunks(game.Camera.Position, game.ChunkCache, game.Perlin1, game.Perlin2, game.Perlin3)
+		world.ManageChunks(game.Worley, game.BiomeSelector, game.Camera.Position, game.ChunkCache, game.Perlin1, game.Perlin2, game.Perlin3)
 
 		//  Draw
 		render.RenderGame(&game)

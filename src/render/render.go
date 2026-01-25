@@ -93,6 +93,7 @@ func RenderVoxels(game *load.Game) {
 	// --- Round 3: transparent ---
 	rl.SetBlendMode(rl.BlendAlpha)
 	rl.DisableDepthMask()
+	//rl.BeginShaderMode(game.Shader)
 	for _, it := range transparentItems {
 		switch it.Type {
 		case "Water":
@@ -115,6 +116,7 @@ func RenderVoxels(game *load.Game) {
 		}
 	}
 
+	//rl.EndShaderMode()
 	rl.EnableDepthMask()
 	rl.SetBlendMode(rl.BlendMode(0))
 }

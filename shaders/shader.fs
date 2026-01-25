@@ -12,17 +12,15 @@ out vec4 finalColor;
 uniform vec3 viewPos;
 uniform float fogDensity;
 
-void main()
-{
+void main() {
     vec3 N = normalize(fragNormal);
     vec3 L = normalize(-lightDir);
 
-    // cor base do material
     vec3 baseColor = (colDiffuse * fragColor).rgb;
 
-    float diff = max(dot(N, L), 0.2); // nunca menos que 0.2
+    float diff = max(dot(N, L), 0.2); // never less than 0.2
 
-    // componente ambiente mínima (para não ficar preto)
+    // minimum ambient component (so shadows don't turn completely black)
     float ambient = 0.4;
     vec3 litColor = baseColor * (ambient + diff * 0.75);
 

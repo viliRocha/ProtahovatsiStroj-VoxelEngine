@@ -325,48 +325,40 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 	}
 }
 
-func genClouds(chunk *pkg.Chunk, position rl.Vector3, p *perlin.Perlin) {
+func genClouds(chunk *pkg.Chunk, position rl.Vector3, x, z int, p *perlin.Perlin) {
 	threshold := 0.05 // Intensity of the cloud formation
 	cloudFrequency := 0.05
 
-	for x := 0; x < pkg.ChunkSize; x++ {
-		for z := 0; z < pkg.ChunkSize; z++ {
-			// Global coordinates
-			globalX := int(position.X) + x
-			globalZ := int(position.Z) + z
+	// Global coordinates
+	globalX := int(position.X) + x
+	globalZ := int(position.Z) + z
 
-			noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
+	noise := p.Noise2D(float64(globalX)*cloudFrequency, float64(globalZ)*cloudFrequency)
 
-			if noise > threshold {
-				if chunk.Voxels[x][pkg.CloudHeight][z].Type == "Air" {
-					chunk.Voxels[x][pkg.CloudHeight][z] = pkg.VoxelData{Type: "Cloud"}
-				} else {
-					break // meets trees or mauntain
-				}
-			}
+	if noise > threshold {
+		if chunk.Voxels[x][pkg.CloudHeight][z].Type == "Air" {
+			chunk.Voxels[x][pkg.CloudHeight][z] = pkg.VoxelData{Type: "Cloud"}
+		} else {
+			return // meets trees or mauntain
 		}
 	}
 }
 
-func genLakeFormations(chunk *pkg.Chunk) {
+func genWaterFormations(chunk *pkg.Chunk, x, z int) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
-	for x := range pkg.ChunkSize {
-		for z := range pkg.ChunkSize {
-			topWaterY := waterLevel
+	topWaterY := waterLevel
 
-			for y := waterLevel; y >= 0; y-- {
-				if chunk.Voxels[x][y][z].Type == "Air" {
-					//	Water shouldn't replace solid blocks (go through them)
-					chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Water"}
-				} else {
-					break // meets ground → stops
-				}
-			}
-
-			genSandFormations(chunk, topWaterY, x, z)
+	for y := waterLevel; y >= 0; y-- {
+		if chunk.Voxels[x][y][z].Type == "Air" {
+			//	Water shouldn't replace solid blocks (go through them)
+			chunk.Voxels[x][y][z] = pkg.VoxelData{Type: "Water"}
+		} else {
+			break // meets ground → stops
 		}
 	}
+
+	genSandFormations(chunk, topWaterY, x, z)
 }
 
 func genSandFormations(chunk *pkg.Chunk, ylevel, x, z int) {
