@@ -1,27 +1,54 @@
 package world
 
 import (
-	"go-engine/src/pkg"
 	"math"
 	"math/rand"
 
+	"go-engine/src/pkg"
+
 	"github.com/aquilax/go-perlin"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// Function that calculates the height of a biome
-type HeightFunc func(gx, gz int, p2, p3 *perlin.Perlin) float64
-
-type BiomeProperties struct {
-	Modifier         HeightFunc
-	SurfaceBlock     string
-	UndergroundBlock string
-}
-
-var BiomeTypes = map[string]BiomeProperties{
+var BiomeTypes = map[string]*pkg.BiomeProperties{
 	"Meadow": {
 		Modifier:         meadowModifier,
 		SurfaceBlock:     "Grass",
 		UndergroundBlock: "Dirt",
+		TreeTypes: []string{
+			"F=F[FA(3)L][FA(3)L][FA(3)L]A(3)",
+			"F=F[F+A(5)L][−A(5)L][/A(4)L][\\A(4)L]",
+			"F=F[A(3)L]F[-A(2)L]F[/A(2)L]F[+A(1)L]",
+			"F=FFF[FA(2)L][FA(3)L][FA(4)L]",
+		},
+		TreeDensity: 0.2,
+		GrassColor:  rl.NewColor(72, 174, 34, 255), // verde vivo
+		LeavesColor: rl.NewColor(73, 129, 49, 255), // verde escuro
+	},
+	"Birchwood": {
+		Modifier:         birchwoodModifier,
+		SurfaceBlock:     "Grass",
+		UndergroundBlock: "Dirt",
+		TreeTypes: []string{
+			"F=F[-A(2)L]F[/A(2)L]F[+A(1)L]",
+			"F=FF[FA(2)L][FA(3)L][FA(4)L]",
+			"F=F[+A(2)L][-A(2)L]FL",
+		},
+		TreeDensity: 0.4,
+		GrassColor:  rl.NewColor(69, 143, 72, 255),
+		LeavesColor: rl.NewColor(53, 105, 56, 255),
+	},
+	"Savanna": {
+		Modifier:         savannaModifier,
+		SurfaceBlock:     "Grass",
+		UndergroundBlock: "Dirt",
+		TreeTypes: []string{
+			"F=F[FA(3)L][FA(3)L][FA(3)L]A(3)",
+			"F=F[+FA(4)L][-A(4)L][\\A(4)L]",
+		},
+		TreeDensity: 0.2,
+		GrassColor:  rl.NewColor(134, 157, 36, 255),
+		LeavesColor: rl.NewColor(102, 119, 23, 255),
 	},
 	"Desert": {
 		Modifier:         desertModifier,
@@ -32,7 +59,7 @@ var BiomeTypes = map[string]BiomeProperties{
 
 type Cell struct {
 	X, Z  int
-	Biome BiomeProperties
+	Biome pkg.BiomeProperties
 }
 
 type WorleyNoise struct {
@@ -85,11 +112,11 @@ func NewBiomeSelector(seed int64, cellSize int) *BiomeSelector {
 	return &BiomeSelector{Seed: seed, CellSize: cellSize}
 }
 
-func (b *BiomeSelector) biomeForCell(cellX, cellZ int) BiomeProperties {
+func (b *BiomeSelector) biomeForCell(cellX, cellZ int) *pkg.BiomeProperties {
 	h := int64(cellX*83492791^cellZ*1234567) ^ b.Seed
 	r := rand.New(rand.NewSource(h))
 
-	biomeKeys := []string{"Meadow", "Desert"}
+	biomeKeys := []string{"Meadow", "Birchwood", "Savanna", "Desert"}
 	key := biomeKeys[r.Intn(len(biomeKeys))]
 	return BiomeTypes[key]
 }
@@ -111,9 +138,48 @@ func meadowModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
 	return (n2*1.2 + n3*0.3) * float64(pkg.WorldHeight/2) // Normalizes the noise value to [0, worldHeight / 2]
 }
 
-// Flatter terrain
 func desertModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
 	n := p2.Noise2D(float64(gx)*0.003, float64(gz)*0.003)
-	base := n * float64(pkg.WorldHeight/2)
+	base := n * 0.7 * float64(pkg.WorldHeight/3)
 	return base
 }
+
+func birchwoodModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
+	n2 := p2.Noise2D(float64(gx)*0.007, float64(gz)*0.007)
+	n3 := p3.Noise2D(float64(gx)*0.01, float64(gz)*0.01)
+
+	return (n2*0.6 + n3*0.3) * float64(pkg.WorldHeight/3)
+}
+
+func savannaModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
+	n2 := p2.Noise2D(float64(gx)*0.007, float64(gz)*0.007)
+	n3 := p3.Noise2D(float64(gx)*0.02, float64(gz)*0.02)
+
+	return (n2*0.4 + n3*0.3) * float64(pkg.WorldHeight/3)
+}
+
+/*
+func mountainModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
+	// Defina um centro fixo ou derivado do Worley
+	centerX, centerZ := 0, 0 // pode ser ajustado dinamicamente
+	dx := float64(gx - centerX)
+	dz := float64(gz - centerZ)
+	dist := math.Sqrt(dx*dx + dz*dz)
+
+	// Raio da montanha
+	radius := 80.0
+	height := 1.0 - (dist / radius)
+
+	if height < 0 {
+		height = 0
+	}
+
+	// Elevação máxima
+	peak := math.Pow(height, 2.0) * float64(pkg.WorldHeight-8)
+
+	// Combina com globalHeight para suavizar entorno
+	//base := globalHeight(gx, gz, p2) * float64(pkg.WorldHeight/4)
+
+	return peak
+}
+*/

@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"github.com/aquilax/go-perlin"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -10,13 +11,14 @@ const (
 	WorldHeight        int     = 112
 	CloudHeight        int     = 92
 	ChunkSize          int     = 16
-	ChunkDistance      int     = 6
+	ChunkDistance      int     = 5
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 
 type VoxelData struct {
 	Type  string
 	Model rl.Model
+	Color rl.Color
 }
 
 // Stores plant positions
@@ -47,7 +49,8 @@ type TransparentItem struct {
 type Chunk struct {
 	Voxels    [ChunkSize][WorldHeight][ChunkSize]VoxelData
 	HeightMap [ChunkSize][ChunkSize]int // final height per terrain column
-	Neighbors [4]*Chunk                 // 0: +X, 1: -X, 2: 4: +Z, 5: -Z
+	BiomeMap  [ChunkSize][ChunkSize]BiomeProperties
+	Neighbors [4]*Chunk // 0: +X, 1: -X, 2: 4: +Z, 5: -Z
 	Plants    []PlantData
 	Trees     []TreeData
 
@@ -65,6 +68,19 @@ type Chunk struct {
 
 type Coords struct {
 	X, Y, Z int
+}
+
+// Function that calculates the height of a biome
+type HeightFunc func(gx, gz int, p2, p3 *perlin.Perlin) float64
+
+type BiomeProperties struct {
+	Modifier         HeightFunc
+	SurfaceBlock     string
+	UndergroundBlock string
+	TreeTypes        []string
+	TreeDensity      float32
+	GrassColor       rl.Color
+	LeavesColor      rl.Color
 }
 
 var FaceDirections = []rl.Vector3{

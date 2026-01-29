@@ -21,7 +21,7 @@ type BlockProperties struct {
 
 var BlockTypes = map[string]BlockProperties{
 	"Grass": {
-		Color:     rl.NewColor(72, 174, 34, 255), // Green
+		Color:     rl.NewColor(72, 174, 34, 255), // Default green
 		IsSolid:   true,
 		IsVisible: true,
 	},
@@ -40,13 +40,13 @@ var BlockTypes = map[string]BlockProperties{
 		IsSolid:   true,
 		IsVisible: true,
 	},
-	"Wood": {
+	"OakWood": {
 		Color:     rl.NewColor(126, 90, 57, 255), // Light brown
 		IsSolid:   true,
 		IsVisible: true,
 	},
 	"Leaves": {
-		Color:     rl.NewColor(73, 129, 49, 255), // Dark green
+		Color:     rl.NewColor(73, 129, 49, 255), //	Default dark green
 		IsSolid:   true,
 		IsVisible: true,
 	},
@@ -158,7 +158,7 @@ func applyLSystem(axiom string, rules map[rune]string, iterations int) string {
 	return result
 }
 
-func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string) {
+func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string, biome pkg.BiomeProperties) {
 	stack := []TurtleState{}
 	currentPos := position
 	direction := rl.Vector3{0, 1, 0} //	Initial direction (upwards)
@@ -174,7 +174,7 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 		case 'F': // Create wood blocks for tree tunks
 
 			if currentPos.Y >= 0 && int(currentPos.Y) < pkg.WorldHeight {
-				setVoxelGlobal(chunkCache, currentPos, pkg.VoxelData{Type: "Wood"})
+				setVoxelGlobal(chunkCache, currentPos, pkg.VoxelData{Type: "OakWood"})
 			}
 
 			// Moving in the current direction
@@ -241,7 +241,7 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 								currentPos.Z + newDir.Z,
 							}
 
-							setVoxelGlobal(chunkCache, newPos, pkg.VoxelData{Type: "Wood"})
+							setVoxelGlobal(chunkCache, newPos, pkg.VoxelData{Type: "OakWood"})
 
 							currentPos = newPos
 							// Increases the angle to open the next branch
@@ -268,31 +268,47 @@ func placeTree(chunkCache *ChunkCache, position rl.Vector3, treeStructure string
 
 				if int(ly) >= 0 && int(ly) < pkg.WorldHeight {
 					leafPos := rl.Vector3{lx, ly, lz}
-					setVoxelGlobal(chunkCache, leafPos, pkg.VoxelData{Type: "Leaves"})
+					setVoxelGlobal(chunkCache, leafPos, pkg.VoxelData{
+						Type:  "Leaves",
+						Color: biome.LeavesColor,
+					})
 				}
 			}
 		}
 	}
 }
 
-func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, lsystemRule string, oldTrees []pkg.TreeData, reuseTrees bool) {
+func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vector3, oldTrees []pkg.TreeData, reuseTrees bool) {
 	waterLevel := int(float64(pkg.WorldHeight) * pkg.WaterLevelFraction)
 
 	if reuseTrees && oldTrees != nil {
 		for _, tree := range oldTrees {
-			placeTree(chunkCache, tree.Position, tree.StructureStr)
+			x := int(tree.Position.X) - int(chunkOrigin.X)
+			z := int(tree.Position.Z) - int(chunkOrigin.Z)
+			biome := chunk.BiomeMap[x][z]
+
+			placeTree(chunkCache, tree.Position, tree.StructureStr, biome)
 			chunk.Trees = append(chunk.Trees, tree)
 		}
 		return
 	}
 
-	rules := parseLSystemRule(lsystemRule)
-	treeStructure := applyLSystem("F", rules, 2)
-	treeCount := rand.Intn(pkg.ChunkSize / 8)
+	//	Max amount of trees in the chunk
+	treeCount := pkg.ChunkSize / 4
 
 	for range treeCount {
 		x := rand.Intn(pkg.ChunkSize)
 		z := rand.Intn(pkg.ChunkSize)
+
+		biome := chunk.BiomeMap[x][z]
+
+		// densidade do bioma (0.0 a 1.0)
+		density := biome.TreeDensity
+
+		// chance de gerar árvore nesta tentativa
+		if rand.Float32() > density {
+			continue
+		}
 
 		// find the surface
 		height := chunk.HeightMap[x][z]
@@ -309,6 +325,19 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 		if height < waterLevel {
 			continue
 		}
+
+		// It only generates a tree if the biome has defined types
+		if len(biome.TreeTypes) == 0 {
+			continue
+		}
+
+		// Choose a tree from the biome
+		treeType := biome.TreeTypes[rand.Intn(len(biome.TreeTypes))]
+
+		// Builds the tree based on the type
+		rules := parseLSystemRule(treeType)
+		treeStructure := applyLSystem("F", rules, 2)
+
 		treePosGlobal := rl.NewVector3(
 			chunkOrigin.X+float32(x),
 			chunkOrigin.Y+float32(height+1),
@@ -316,7 +345,7 @@ func generateTrees(chunk *pkg.Chunk, chunkCache *ChunkCache, chunkOrigin rl.Vect
 		)
 
 		// Build the tree with the generated structure
-		placeTree(chunkCache, treePosGlobal, treeStructure)
+		placeTree(chunkCache, treePosGlobal, treeStructure, biome)
 
 		chunk.Trees = append(chunk.Trees, pkg.TreeData{
 			Position:     treePosGlobal,

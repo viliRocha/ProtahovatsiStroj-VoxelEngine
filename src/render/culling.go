@@ -81,7 +81,12 @@ func BuildChunkMesh(game *load.Game, chunk *pkg.Chunk, chunkPos rl.Vector3) {
 			continue
 		}
 
-		c := block.Color
+		c := voxel.Color
+		if c.R == 0 && c.G == 0 && c.B == 0 && c.A == 0 {
+			// fallback to default color if not set
+			c = block.Color
+		}
+
 		// Add color per block (RGBA) on a deterministic way (so it can be recalculated when a new chunk is created and still look the same)
 		colorModifier := uint8(
 			((pos.X*73856093 + pos.Y*19349663) ^
