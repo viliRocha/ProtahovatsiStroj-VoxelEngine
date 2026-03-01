@@ -13,12 +13,23 @@ func main() {
 
 	// Main game loop
 	for !rl.WindowShouldClose() {
-		//  Update
-		if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Toggle menu
+		if rl.IsKeyPressed(rl.KeyP) {
+			render.ShowMenu = !render.ShowMenu
+
+			if render.ShowMenu {
+				rl.EnableCursor()
+			}
+		}
+
+		if rl.IsMouseButtonPressed(rl.MouseLeftButton) && !render.ShowMenu {
 			rl.DisableCursor()
 		}
 
-		rl.UpdateCamera(&game.Camera, game.CameraMode)
+		// Update the camera only when it is not in the menu.
+		if !render.ShowMenu {
+			rl.UpdateCamera(&game.Camera, game.CameraMode)
+		}
 
 		// Manage chunks based on player's position
 		world.ManageChunks(game.Worley, game.BiomeSelector, game.Camera.Position, game.ChunkCache, game.Perlin1, game.Perlin2, game.Perlin3)

@@ -144,6 +144,23 @@ func desertModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
 	return base
 }
 
+/*
+func mauntainModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
+	// Ruído base
+	n := p2.Noise2D(float64(gx)*0.01, float64(gz)*0.01)
+
+	// Normaliza para positivo
+	n = (n + 1) / 2.0
+
+	// Cria formato convexo: topo largo, base fina
+	// sqrt(n) dá mais área no topo, pow(n, >1) afina a base
+	shaped := math.Sqrt(n) * math.Pow(n, 2.0)
+
+	// Escala para altura
+	return shaped * float64(pkg.WorldHeight/3)
+}
+*/
+
 func birchwoodModifier(gx, gz int, p2, p3 *perlin.Perlin) float64 {
 	n2 := p2.Noise2D(float64(gx)*0.007, float64(gz)*0.007)
 	n3 := p3.Noise2D(float64(gx)*0.01, float64(gz)*0.01)

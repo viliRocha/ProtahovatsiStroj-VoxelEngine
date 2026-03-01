@@ -7,11 +7,12 @@ import (
 
 var PlantModels [4]rl.Model
 
+var ChunkDistance int = 5
+
 const (
 	WorldHeight        int     = 112
 	CloudHeight        int     = 92
 	ChunkSize          int     = 16
-	ChunkDistance      int     = 5
 	WaterLevelFraction float64 = 0.375 // 3/8
 )
 

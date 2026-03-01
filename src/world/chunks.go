@@ -72,6 +72,7 @@ func (cc *ChunkCache) GetChunk(worley *WorleyNoise, biomeSel *BiomeSelector, pos
 	// Update caches
 	cc.CacheMutex.Lock()
 	cc.Active[coord] = newChunk
+
 	// applies pending issues after the core terrain generation so tree voxels aren’t overwritten.
 	if writes, ok := cc.PendingVoxels[coord]; ok {
 		for _, w := range writes {
@@ -139,28 +140,32 @@ func ManageChunks(worley *WorleyNoise, biomeSel *BiomeSelector, playerPosition r
 	// Counter to limit how many chunks are enqueued
 	chunksQueued := 0
 
+	var candidates []pkg.Coords
+
 	// Send the chunk positions to be loaded
 	for x := playerCoord.X - pkg.ChunkDistance; x <= playerCoord.X+pkg.ChunkDistance; x++ {
 		for z := playerCoord.Z - pkg.ChunkDistance; z <= playerCoord.Z+pkg.ChunkDistance; z++ {
+			candidates = append(candidates, pkg.Coords{X: x, Y: 0, Z: z})
+		}
+	}
+
+	// Only one verification with lock per frame
+	chunkCache.CacheMutex.RLock()
+	for _, coord := range candidates {
+		chunk, exists := chunkCache.Active[coord]
+		if !exists || (chunk != nil && chunk.IsOutdated) {
+			chunkPos := rl.NewVector3(float32(coord.X*pkg.ChunkSize), 0, float32(coord.Z*pkg.ChunkSize))
+
+			chunkRequests <- chunkPos
+
+			chunksQueued++
+
 			if chunksQueued >= MaxChunksPerFrame {
-				break
-			}
-
-			coord := pkg.Coords{X: x, Y: 0, Z: z}
-
-			// Allow aerial chunks to load if there are pending writes for them
-			chunkCache.CacheMutex.RLock()
-			chunk, exists := chunkCache.Active[coord]
-			chunkCache.CacheMutex.RUnlock()
-
-			if !exists || (chunk != nil && chunk.IsOutdated) {
-				chunkPos := rl.NewVector3(float32(x*pkg.ChunkSize), 0, float32(z*pkg.ChunkSize))
-
-				chunkRequests <- chunkPos
-				chunksQueued++
+				break // does not block the loop, only exits
 			}
 		}
 	}
+	chunkCache.CacheMutex.RUnlock()
 	close(chunkRequests)
 
 	// Wait for all workers to finish

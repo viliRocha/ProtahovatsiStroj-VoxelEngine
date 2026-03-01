@@ -8,6 +8,7 @@ import (
 	"go-engine/src/world"
 
 	"github.com/aquilax/go-perlin"
+	gui "github.com/gen2brain/raylib-go/raygui"
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -23,6 +24,8 @@ const (
 	//  Adjust the frequency of noise, affecting the amount of detail present in the noise by controlling the scale of the variations.
 	perlinBeta = 1.5
 )
+
+var FogCoefficient float32 = 0.0 // 0.072
 
 type Game struct {
 	Camera        rl.Camera
@@ -61,6 +64,12 @@ func InitGame() Game {
 	perlin1 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed1)
 	perlin2 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed2)
 	perlin3 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed3)
+	/*
+		seed1 := rand.Int63()
+		perlin1 := perlin.NewPerlin(perlinAlpha, perlinBeta, perlinN, seed1)
+		perlin2 := perlin1
+		perlin3 := perlin2
+	*/
 
 	worley := world.NewWorleyNoise(seed1, 128)
 	biomeSel := world.NewBiomeSelector(seed1, 128)
@@ -72,7 +81,7 @@ func InitGame() Game {
 
 	// Fog density calculation
 	// Inverse relationship: more chunks → less fog
-	fogDensity := float32(0.072 * (1.0 / float32(pkg.ChunkDistance)))
+	fogDensity := float32(FogCoefficient * (1.0 / float32(pkg.ChunkDistance)))
 	//fmt.Println(fogDensity)
 	rl.SetShaderValue(Shader, locFogDensity, []float32{fogDensity}, rl.ShaderUniformFloat)
 
@@ -103,6 +112,31 @@ func InitGame() Game {
 	chunkCache.Active[originCoord] = world.GenerateChunk(worley, biomeSel, originPos, perlin1, perlin2, perlin3, chunkCache, nil, false, nil, false)
 
 	rl.SetTargetFPS(100)
+
+	defaultFont := rl.GetFontDefault()
+
+	gui.SetFont(defaultFont)
+
+	gui.SetStyle(gui.DEFAULT, gui.TEXT_SIZE, 20) // bigger text font for buttons
+
+	// Color when mouse hovers over the button (RRGGBBAA)
+	gui.SetStyle(gui.BUTTON, gui.BORDER_COLOR_FOCUSED, 0x888888ff)
+	gui.SetStyle(gui.BUTTON, gui.BASE_COLOR_FOCUSED, 0xaaaaaaff)
+	gui.SetStyle(gui.BUTTON, gui.TEXT_COLOR_FOCUSED, 0xffffffff)
+
+	// Color when pressed
+	gui.SetStyle(gui.BUTTON, gui.BORDER_COLOR_PRESSED, 0x333333ff)
+	gui.SetStyle(gui.BUTTON, gui.BASE_COLOR_PRESSED, 0x444444ff)
+	gui.SetStyle(gui.BUTTON, gui.TEXT_COLOR_PRESSED, 0xffffffff)
+
+	//	Slider Bar style:
+	gui.SetStyle(gui.SLIDER, gui.BORDER_COLOR_NORMAL, 0x888888ff)
+
+	gui.SetStyle(gui.SLIDER, gui.BORDER_COLOR_FOCUSED, 0x444444ff)
+
+	gui.SetStyle(gui.SLIDER, gui.BORDER_COLOR_PRESSED, 0x333333ff)
+
+	//	Menu background style
 
 	return Game{
 		Camera:        camera,
